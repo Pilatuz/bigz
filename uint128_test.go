@@ -3,7 +3,6 @@ package uint128
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"math"
 	"math/big"
 	"testing"
 )
@@ -22,6 +21,13 @@ func TestUint128(t *testing.T) {
 			x = x.Rsh(64)
 		} else if i%7 == 0 {
 			x = x.Lsh(64)
+		} else if i%9 == 0 {
+			y = y.Rsh(64)
+		} else if i%21 == 0 {
+			y = y.Lsh(64)
+		} else if i%41 == 0 {
+			x.Hi = 0
+			y.Hi = 0
 		}
 
 		if FromBig(x.Big()) != x {
@@ -67,18 +73,16 @@ func TestUint128(t *testing.T) {
 		}
 	}
 
-	// Check FromBig panics
-	checkPanic := func(fn func(), msg string) {
-		defer func() {
-			r := recover()
-			if s, ok := r.(string); !ok || s != msg {
-				t.Errorf("expected %q, got %q", msg, r)
-			}
-		}()
-		fn()
+	// Check FromBig
+	if got := FromBig(nil); !got.Equals(Zero()) {
+		t.Fatalf("FromBig(nil) does not equal to 0, got: %v", got)
 	}
-	checkPanic(func() { _ = FromBig(big.NewInt(-1)) }, "value cannot be negative")
-	checkPanic(func() { _ = FromBig(new(big.Int).Lsh(big.NewInt(1), 129)) }, "value overflows Uint128")
+	if got := FromBig(big.NewInt(-1)); !got.Equals(Zero()) {
+		t.Fatalf("FromBig(-1) does not equal to 0, got: %v", got)
+	}
+	if got := FromBig(new(big.Int).Lsh(big.NewInt(1), 129)); !got.Equals(Max()) {
+		t.Fatalf("FromBig(2^129) does not equal to Max(), got: %v", got)
+	}
 }
 
 func TestArithmetic(t *testing.T) {
@@ -94,7 +98,7 @@ func TestArithmetic(t *testing.T) {
 		if randBuf[16]&2 != 0 {
 			Hi = binary.LittleEndian.Uint64(randBuf[8:])
 		}
-		return New(Lo, Hi)
+		return Uint128{Lo, Hi}
 	}
 	mod128 := func(i *big.Int) *big.Int {
 		// wraparound semantics
@@ -103,23 +107,6 @@ func TestArithmetic(t *testing.T) {
 		}
 		_, rem := i.QuoRem(i, new(big.Int).Lsh(big.NewInt(1), 128), new(big.Int))
 		return rem
-	}
-	checkBinOpX := func(x Uint128, op string, y Uint128, fn func(x, y Uint128) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
-		t.Helper()
-		rb := fnb(new(big.Int), x.Big(), y.Big())
-		defer func() {
-			if r := recover(); r != nil {
-				if rb.BitLen() <= 128 && rb.Sign() >= 0 {
-					t.Fatalf("mismatch: %v%v%v should not panic, %v", x, op, y, rb)
-				}
-			} else if rb.BitLen() > 128 || rb.Sign() < 0 {
-				t.Fatalf("mismatch: %v%v%v should panic, %v", x, op, y, rb)
-			}
-		}()
-		r := fn(x, y)
-		if r.Big().Cmp(rb) != 0 {
-			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
-		}
 	}
 	checkUnOp := func(x Uint128, op string, fn func(x Uint128) Uint128, fnb func(z, x *big.Int) *big.Int) {
 		t.Helper()
@@ -143,24 +130,6 @@ func TestArithmetic(t *testing.T) {
 		rb := mod128(fnb(new(big.Int), x.Big(), n))
 		if r.Big().Cmp(rb) != 0 {
 			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, n, rb, r)
-		}
-	}
-	checkBinOp64X := func(x Uint128, op string, y uint64, fn func(x Uint128, y uint64) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
-		t.Helper()
-		xb, yb := x.Big(), From64(y).Big()
-		rb := fnb(new(big.Int), xb, yb)
-		defer func() {
-			if r := recover(); r != nil {
-				if rb.BitLen() <= 128 && rb.Sign() >= 0 {
-					t.Fatalf("mismatch: %v%v%v should not panic, %v", x, op, y, rb)
-				}
-			} else if rb.BitLen() > 128 || rb.Sign() < 0 {
-				t.Fatalf("mismatch: %v%v%v should panic, %v", x, op, y, rb)
-			}
-		}()
-		r := fn(x, y)
-		if r.Big().Cmp(rb) != 0 {
-			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
 		}
 	}
 	checkBinOp64 := func(x Uint128, op string, y uint64, fn func(x Uint128, y uint64) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
@@ -192,18 +161,15 @@ func TestArithmetic(t *testing.T) {
 		if expected, got := b.Reverse(), b128FromBig(x.Reverse().Big()); !expected.Equals(got) {
 			t.Errorf("mismatch: %v RotateRight should equal %v, got %v", x, expected, got)
 		}
-		if expected, got := x.Big().BitLen(), x.Len(); expected != got {
+		if expected, got := x.Big().BitLen(), x.BitLen(); expected != got {
 			t.Errorf("mismatch: %v BitLen should equal %v, got %v", x, expected, got)
 		}
 	}
 	for i := 0; i < 1000; i++ {
 		x, y, z := randUint128(), randUint128(), uint(randUint128().Lo&0xFF)
-		checkBinOpX(x, "[+]", y, Uint128.Add, (*big.Int).Add)
-		checkBinOpX(x, "[-]", y, Uint128.Sub, (*big.Int).Sub)
-		checkBinOpX(x, "[*]", y, Uint128.Mul, (*big.Int).Mul)
-		checkBinOp(x, "+", y, Uint128.AddWrap, (*big.Int).Add)
-		checkBinOp(x, "-", y, Uint128.SubWrap, (*big.Int).Sub)
-		checkBinOp(x, "*", y, Uint128.MulWrap, (*big.Int).Mul)
+		checkBinOp(x, "+", y, Uint128.Add, (*big.Int).Add)
+		checkBinOp(x, "-", y, Uint128.Sub, (*big.Int).Sub)
+		checkBinOp(x, "*", y, Uint128.Mul, (*big.Int).Mul)
 		if !y.IsZero() {
 			checkBinOp(x, "/", y, Uint128.Div, (*big.Int).Div)
 			checkBinOp(x, "%", y, Uint128.Mod, (*big.Int).Mod)
@@ -218,12 +184,9 @@ func TestArithmetic(t *testing.T) {
 
 		// check 64-bit variants
 		y64 := y.Lo
-		checkBinOp64X(x, "[+]", y64, Uint128.Add64, (*big.Int).Add)
-		checkBinOp64X(x, "[-]", y64, Uint128.Sub64, (*big.Int).Sub)
-		checkBinOp64X(x, "[*]", y64, Uint128.Mul64, (*big.Int).Mul)
-		checkBinOp64(x, "+", y64, Uint128.AddWrap64, (*big.Int).Add)
-		checkBinOp64(x, "-", y64, Uint128.SubWrap64, (*big.Int).Sub)
-		checkBinOp64(x, "*", y64, Uint128.MulWrap64, (*big.Int).Mul)
+		checkBinOp64(x, "+", y64, Uint128.Add64, (*big.Int).Add)
+		checkBinOp64(x, "-", y64, Uint128.Sub64, (*big.Int).Sub)
+		checkBinOp64(x, "*", y64, Uint128.Mul64, (*big.Int).Mul)
 		if y64 != 0 {
 			checkBinOp64(x, "/", y64, Uint128.Div64, (*big.Int).Div)
 			modfn := func(x Uint128, y uint64) Uint128 {
@@ -231,6 +194,7 @@ func TestArithmetic(t *testing.T) {
 			}
 			checkBinOp64(x, "%", y64, modfn, (*big.Int).Mod)
 		}
+		checkBinOp64(x, "&^", y64, Uint128.AndNot64, (*big.Int).AndNot)
 		checkBinOp64(x, "&", y64, Uint128.And64, (*big.Int).And)
 		checkBinOp64(x, "|", y64, Uint128.Or64, (*big.Int).Or)
 		checkBinOp64(x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
@@ -238,97 +202,6 @@ func TestArithmetic(t *testing.T) {
 		// check bits
 		checkBits(x, int(z))
 		checkBits(y, int(z))
-	}
-}
-
-func TestOverflowAndUnderflow(t *testing.T) {
-	x := Max
-	y := New(10, 10)
-	z := From64(10)
-	checkPanic := func(fn func(), msg string) {
-		defer func() {
-			r := recover()
-			if s, ok := r.(string); !ok || s != msg {
-				t.Errorf("expected %q, got %q", msg, r)
-			}
-		}()
-		fn()
-	}
-
-	// should panic
-	checkPanic(func() { _ = x.Add(y) }, "overflow")
-	checkPanic(func() { _ = x.Add64(10) }, "overflow")
-	checkPanic(func() { _ = y.Sub(x) }, "underflow")
-	checkPanic(func() { _ = z.Sub64(math.MaxInt64) }, "underflow")
-	checkPanic(func() { _ = x.Mul(y) }, "overflow")
-	checkPanic(func() { _ = New(0, 10).Mul(New(0, 10)) }, "overflow")
-	checkPanic(func() { _ = New(0, 1).Mul(New(0, 1)) }, "overflow")
-	checkPanic(func() { _ = x.Mul64(math.MaxInt64) }, "overflow")
-}
-
-func TestLeadingZeros(t *testing.T) {
-	tcs := []struct {
-		l     Uint128
-		r     Uint128
-		zeros int
-	}{
-		{
-			l:     New(0x00, 0xf000000000000000),
-			r:     New(0x00, 0x8000000000000000),
-			zeros: 1,
-		},
-		{
-			l:     New(0x00, 0xf000000000000000),
-			r:     New(0x00, 0xc000000000000000),
-			zeros: 2,
-		},
-		{
-			l:     New(0x00, 0xf000000000000000),
-			r:     New(0x00, 0xe000000000000000),
-			zeros: 3,
-		},
-		{
-			l:     New(0x00, 0xffff000000000000),
-			r:     New(0x00, 0xff00000000000000),
-			zeros: 8,
-		},
-		{
-			l:     New(0x00, 0x000000000000ffff),
-			r:     New(0x00, 0x000000000000ff00),
-			zeros: 56,
-		},
-		{
-			l:     New(0xf000000000000000, 0x01),
-			r:     New(0x4000000000000000, 0x00),
-			zeros: 63,
-		},
-		{
-			l:     New(0xf000000000000000, 0x00),
-			r:     New(0x4000000000000000, 0x00),
-			zeros: 64,
-		},
-		{
-			l:     New(0xf000000000000000, 0x00),
-			r:     New(0x8000000000000000, 0x00),
-			zeros: 65,
-		},
-		{
-			l:     New(0x00, 0x00),
-			r:     New(0x00, 0x00),
-			zeros: 128,
-		},
-		{
-			l:     New(0x01, 0x00),
-			r:     New(0x00, 0x00),
-			zeros: 127,
-		},
-	}
-
-	for _, tc := range tcs {
-		zeros := tc.l.Xor(tc.r).LeadingZeros()
-		if zeros != tc.zeros {
-			t.Errorf("mismatch (expected: %d, got: %d)", tc.zeros, zeros)
-		}
 	}
 }
 
@@ -340,12 +213,12 @@ func TestString(t *testing.T) {
 		}
 	}
 	// Test 0 string
-	if Zero.String() != "0" {
-		t.Fatalf(`Zero.String() should be "0", got %q`, Zero.String())
+	if got := Zero().String(); got != "0" {
+		t.Fatalf(`Zero.String() should be "0", got %q`, got)
 	}
 	// Test Max string
-	if Max.String() != "340282366920938463463374607431768211455" {
-		t.Fatalf(`Max.String() should be "0", got %q`, Max.String())
+	if got := Max().String(); got != "340282366920938463463374607431768211455" {
+		t.Fatalf(`Max.String() should be "0", got %q`, got)
 	}
 }
 
@@ -360,7 +233,7 @@ func BenchmarkArithmetic(b *testing.B) {
 		if randBuf[16]&2 != 0 {
 			Hi = binary.LittleEndian.Uint64(randBuf[8:])
 		}
-		return New(Lo, Hi)
+		return Uint128{Lo, Hi}
 	}
 	x, y := randUint128(), randUint128()
 
@@ -415,8 +288,8 @@ func BenchmarkDivision(b *testing.B) {
 	}
 	x64 := From64(randU64())
 	y64 := From64(randU64())
-	x128 := New(randU64(), randU64())
-	y128 := New(randU64(), randU64())
+	x128 := Uint128{randU64(), randU64()}
+	y128 := Uint128{randU64(), randU64()}
 
 	b.Run("native 64/64", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
@@ -476,10 +349,10 @@ func BenchmarkDivision(b *testing.B) {
 func BenchmarkString(b *testing.B) {
 	buf := make([]byte, 16)
 	rand.Read(buf)
-	x := New(
+	x := Uint128{
 		binary.LittleEndian.Uint64(buf[:8]),
 		binary.LittleEndian.Uint64(buf[8:]),
-	)
+	}
 	xb := x.Big()
 	b.Run("Uint128", func(b *testing.B) {
 		b.ReportAllocs()

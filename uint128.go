@@ -1,346 +1,365 @@
-package uint128 // import "lukechampine.com/uint128"
+package uint128
 
 import (
-	"encoding/binary"
 	"math"
 	"math/big"
 	"math/bits"
 )
 
-// Zero is a zero-valued uint128.
-var Zero Uint128
+// Note, Zero and Max are functions just to make read-only values.
+// We cannot define constants for structures, and global variables
+// are unacceptable because it will be possible to change them.
 
-// Max is the largest possible uint128 value.
-var Max = New(math.MaxUint64, math.MaxUint64)
+// Zero is the lowest possible Uint128 value.
+func Zero() Uint128 {
+	return Uint128{0, 0}
+}
 
-// A Uint128 is an unsigned 128-bit number.
+// Max is the largest possible Uint128 value.
+func Max() Uint128 {
+	return Uint128{
+		Lo: math.MaxUint64,
+		Hi: math.MaxUint64,
+	}
+}
+
+// Uint128 is an unsigned 128-bit number.
+// All methods are immutable, works just like standard uint64.
 type Uint128 struct {
-	Lo, Hi uint64
+	Lo uint64 // lower 64-bit half
+	Hi uint64 // higher 64-bit half
 }
 
-// IsZero returns true if u == 0.
+// Note, there in no New(lo, hi) just not to confuse
+// which half goes first: lower or hight.
+// Use structure initialization Uint128{Lo: ..., Hi: ...} instead.
+
+// From64 converts 64-bit value v to a Uint128 value.
+// Higher 64-bit half will be zero.
+func From64(v uint64) Uint128 {
+	return Uint128{Lo: v}
+}
+
+// FromBig converts *big.Int to 128-bit Uint128 value ignoring overflows.
+// If input integer is nil or negative then return Zero.
+// If input interger overflows 128-bit then return Max.
+func FromBig(i *big.Int) Uint128 {
+	u, _ := FromBigX(i)
+	return u
+}
+
+// FromBigX converts *big.Int to 128-bit Uint128 value (eXtended version).
+// Provides ok successful flag as a second return value.
+// If input integer is negative or overflows 128-bit then ok=false.
+// If input if nil then zero 128-bit returned.
+func FromBigX(i *big.Int) (Uint128, bool) {
+	switch {
+	case i == nil:
+		return Zero(), true // assuming nil === 0
+	case i.Sign() < 0:
+		return Zero(), false // value cannot be negative!
+	case i.BitLen() > 128:
+		return Max(), false // value overflows 128-bit!
+	}
+
+	// Note, actually result of big.Int.Uint64 is undefined
+	// if stored value is greater than 2^64
+	// but we assume that it just gets lower 64 bits.
+	lo := i.Uint64()
+	hi := new(big.Int).Rsh(i, 64).Uint64()
+	return Uint128{
+		Lo: lo,
+		Hi: hi,
+	}, true
+}
+
+// Big returns 128-bit value as a *big.Int.
+func (u Uint128) Big() *big.Int {
+	i := new(big.Int).SetUint64(u.Hi)
+	i = i.Lsh(i, 64)
+	i = i.Or(i, new(big.Int).SetUint64(u.Lo))
+	return i
+}
+
+// IsZero returns true if stored 128-bit value is zero.
 func (u Uint128) IsZero() bool {
-	// NOTE: we do not compare against Zero, because that is a global variable
-	// that could be modified.
-	return u == Uint128{}
+	return (u.Lo == 0) && (u.Hi == 0)
 }
 
-// Equals returns true if u == v.
-//
-// Uint128 values can be compared directly with ==, but use of the Equals method
-// is preferred for consistency.
+// Equals returns true if two 128-bit values are equal.
+// Uint128 values can be compared directly with == operator
+// but use of the Equals method is preferred for consistency.
 func (u Uint128) Equals(v Uint128) bool {
-	return u == v
+	return (u.Lo == v.Lo) && (u.Hi == v.Hi)
 }
 
-// Equals64 returns true if u == v.
+// Equals64 returns true if 128-bit value equals to a 64-bit value.
 func (u Uint128) Equals64(v uint64) bool {
-	return u.Lo == v && u.Hi == 0
+	return (u.Lo == v) && (u.Hi == 0)
 }
 
-// Cmp compares u and v and returns:
-//
+// Cmp compares two 128-bit values and returns:
 //   -1 if u <  v
 //    0 if u == v
 //   +1 if u >  v
-//
 func (u Uint128) Cmp(v Uint128) int {
-	if u == v {
-		return 0
-	} else if u.Hi < v.Hi || (u.Hi == v.Hi && u.Lo < v.Lo) {
-		return -1
-	} else {
-		return 1
+	switch {
+	case u.Hi > v.Hi:
+		return +1 // u > v
+	case u.Hi < v.Hi:
+		return -1 // u < v
+	case u.Lo > v.Lo:
+		return +1 // u > v
+	case u.Lo < v.Lo:
+		return -1 // u < v
 	}
+	return 0 // u == v
 }
 
-// Cmp64 compares u and v and returns:
-//
+// Cmp64 compares 128-bit and 64-bit values and returns:
 //   -1 if u <  v
 //    0 if u == v
 //   +1 if u >  v
-//
 func (u Uint128) Cmp64(v uint64) int {
-	if u.Hi == 0 && u.Lo == v {
-		return 0
-	} else if u.Hi == 0 && u.Lo < v {
-		return -1
-	} else {
-		return 1
+	switch {
+	case u.Hi != 0:
+		return +1 // u > v
+	case u.Lo > v:
+		return +1 // u > v
+	case u.Lo < v:
+		return -1 // u < v
 	}
+	return 0 // u == v
 }
 
-// And returns u&v.
-func (u Uint128) And(v Uint128) Uint128 {
-	return Uint128{u.Lo & v.Lo, u.Hi & v.Hi}
-}
+///////////////////////////////////////////////////////////////////////////////
+/// logical operators /////////////////////////////////////////////////////////
 
-// And64 returns u&v.
-func (u Uint128) And64(v uint64) Uint128 {
-	return Uint128{u.Lo & v, u.Hi & 0}
-}
-
-// Or returns u|v.
-func (u Uint128) Or(v Uint128) Uint128 {
-	return Uint128{u.Lo | v.Lo, u.Hi | v.Hi}
-}
-
-// Or64 returns u|v.
-func (u Uint128) Or64(v uint64) Uint128 {
-	return Uint128{u.Lo | v, u.Hi | 0}
-}
-
-// Not returns ^v.
+// Not returns logical NOT (^u) of 128-bit value.
 func (u Uint128) Not() Uint128 {
-	return Uint128{^u.Lo, ^u.Hi}
+	return Uint128{
+		Lo: ^u.Lo,
+		Hi: ^u.Hi,
+	}
 }
 
-// AndNot returns u&^v.
+// AndNot returns logical AND NOT (u&^v) of two 128-bit values.
 func (u Uint128) AndNot(v Uint128) Uint128 {
-	return Uint128{u.Lo & ^v.Lo, u.Hi & ^v.Hi}
+	return Uint128{
+		Lo: u.Lo & ^v.Lo,
+		Hi: u.Hi & ^v.Hi,
+	}
 }
 
-// Xor returns u^v.
+// AndNot64 returns logical AND NOT (u&v) of 128-bit and 64-bit values.
+func (u Uint128) AndNot64(v uint64) Uint128 {
+	return Uint128{
+		Lo: u.Lo & ^v,
+		Hi: u.Hi, // ^0 == ff..ff
+	}
+}
+
+// And returns logical AND (u&v) of two 128-bit values.
+func (u Uint128) And(v Uint128) Uint128 {
+	return Uint128{
+		Lo: u.Lo & v.Lo,
+		Hi: u.Hi & v.Hi,
+	}
+}
+
+// And64 returns logical AND (u&v) of 128-bit and 64-bit values.
+func (u Uint128) And64(v uint64) Uint128 {
+	return Uint128{
+		Lo: u.Lo & v,
+		Hi: u.Hi & 0, // hope compiler is able to always put just zero instead
+	}
+}
+
+// Or returns logical OR (u|v) of two 128-bit values.
+func (u Uint128) Or(v Uint128) Uint128 {
+	return Uint128{
+		Lo: u.Lo | v.Lo,
+		Hi: u.Hi | v.Hi,
+	}
+}
+
+// Or64 returns logical OR (u|v) of 128-bit and 64-bit values.
+func (u Uint128) Or64(v uint64) Uint128 {
+	return Uint128{
+		Lo: u.Lo | v,
+		Hi: u.Hi | 0, // hope compiler is able to always put just u.Hi instead
+	}
+}
+
+// Xor returns logical XOR (u^v) of two 128-bit values.
 func (u Uint128) Xor(v Uint128) Uint128 {
-	return Uint128{u.Lo ^ v.Lo, u.Hi ^ v.Hi}
+	return Uint128{
+		Lo: u.Lo ^ v.Lo,
+		Hi: u.Hi ^ v.Hi,
+	}
 }
 
-// Xor64 returns u^v.
+// Xor64 returns logical XOR (u^v) of 128-bit and 64-bit values.
 func (u Uint128) Xor64(v uint64) Uint128 {
-	return Uint128{u.Lo ^ v, u.Hi ^ 0}
+	return Uint128{
+		Lo: u.Lo ^ v,
+		Hi: u.Hi ^ 0, // hope compiler is able to always put just u.Hi instead
+	}
 }
 
-// Add returns u+v.
+///////////////////////////////////////////////////////////////////////////////
+/// arithmetic operators //////////////////////////////////////////////////////
+
+// Add returns sum (u+v) of two 128-bit values.
+// Wrap-around semantic is used here: Max().Add(From64(1)) == Zero()
 func (u Uint128) Add(v Uint128) Uint128 {
-	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
-	hi, carry := bits.Add64(u.Hi, v.Hi, carry)
-	if carry != 0 {
-		panic("overflow")
-	}
-	return Uint128{lo, hi}
+	lo, c0 := bits.Add64(u.Lo, v.Lo, 0)
+	hi, _ := bits.Add64(u.Hi, v.Hi, c0)
+	return Uint128{Lo: lo, Hi: hi}
 }
 
-// AddWrap returns u+v with wraparound semantics; for example,
-// Max.AddWrap(From64(1)) == Zero.
-func (u Uint128) AddWrap(v Uint128) Uint128 {
-	lo, carry := bits.Add64(u.Lo, v.Lo, 0)
-	hi, _ := bits.Add64(u.Hi, v.Hi, carry)
-	return Uint128{lo, hi}
-}
-
-// Add64 returns u+v.
+// Add64 returns sum u+v of 128-bit and 64-bit values.
+// Wrap-around semantic is used here: Max().Add64(1) == Zero()
 func (u Uint128) Add64(v uint64) Uint128 {
-	lo, carry := bits.Add64(u.Lo, v, 0)
-	hi, carry := bits.Add64(u.Hi, 0, carry)
-	if carry != 0 {
-		panic("overflow")
-	}
-	return Uint128{lo, hi}
+	lo, c0 := bits.Add64(u.Lo, v, 0)
+	return Uint128{Lo: lo, Hi: u.Hi + c0}
 }
 
-// AddWrap64 returns u+v with wraparound semantics; for example,
-// Max.AddWrap64(1) == Zero.
-func (u Uint128) AddWrap64(v uint64) Uint128 {
-	lo, carry := bits.Add64(u.Lo, v, 0)
-	hi := u.Hi + carry
-	return Uint128{lo, hi}
-}
-
-// Sub returns u-v.
+// Sub returns difference (u-v) of two 128-bit values.
+// Wrap-around semantic is used here: Zero().Sub(From64(1)) == Max().
 func (u Uint128) Sub(v Uint128) Uint128 {
-	lo, borrow := bits.Sub64(u.Lo, v.Lo, 0)
-	hi, borrow := bits.Sub64(u.Hi, v.Hi, borrow)
-	if borrow != 0 {
-		panic("underflow")
-	}
-	return Uint128{lo, hi}
+	lo, b0 := bits.Sub64(u.Lo, v.Lo, 0)
+	hi, _ := bits.Sub64(u.Hi, v.Hi, b0)
+	return Uint128{Lo: lo, Hi: hi}
 }
 
-// SubWrap returns u-v with wraparound semantics; for example,
-// Zero.SubWrap(From64(1)) == Max.
-func (u Uint128) SubWrap(v Uint128) Uint128 {
-	lo, borrow := bits.Sub64(u.Lo, v.Lo, 0)
-	hi, _ := bits.Sub64(u.Hi, v.Hi, borrow)
-	return Uint128{lo, hi}
-}
-
-// Sub64 returns u-v.
+// Sub64 returns difference (u-v) of 128-bit and 64-bit values.
+// Wrap-around semantic is used here: Zero().Sub64(1) == Max().
 func (u Uint128) Sub64(v uint64) Uint128 {
-	lo, borrow := bits.Sub64(u.Lo, v, 0)
-	hi, borrow := bits.Sub64(u.Hi, 0, borrow)
-	if borrow != 0 {
-		panic("underflow")
-	}
-	return Uint128{lo, hi}
+	lo, b0 := bits.Sub64(u.Lo, v, 0)
+	return Uint128{Lo: lo, Hi: u.Hi - b0}
 }
 
-// SubWrap64 returns u-v with wraparound semantics; for example,
-// Zero.SubWrap64(1) == Max.
-func (u Uint128) SubWrap64(v uint64) Uint128 {
-	lo, borrow := bits.Sub64(u.Lo, v, 0)
-	hi := u.Hi - borrow
-	return Uint128{lo, hi}
-}
-
-// Mul returns u*v.
+// Mul returns multiplication (u*v) of two 128-bit values.
+// Wrap-around semantic is used here: Max().Mul(Max()) == From64(1).
 func (u Uint128) Mul(v Uint128) Uint128 {
 	hi, lo := bits.Mul64(u.Lo, v.Lo)
-	p0, p1 := bits.Mul64(u.Hi, v.Lo)
-	p2, p3 := bits.Mul64(u.Lo, v.Hi)
-	// p4, p5 := bits.Mul64(u.Hi, v.Hi)
-	// p4 and p5 both are zero only
-	// if one u.Hi or v.Hi is zero
-	hi, c0 := bits.Add64(hi, p1, 0)
-	hi, c1 := bits.Add64(hi, p3, c0)
-	if (u.Hi != 0 && v.Hi != 0) || p0 != 0 || p2 != 0 || c1 != 0 {
-		panic("overflow")
-	}
-	return Uint128{lo, hi}
-}
-
-// MulWrap returns u*v with wraparound semantics; for example,
-// Max.MulWrap(Max) == 1.
-func (u Uint128) MulWrap(v Uint128) Uint128 {
-	hi, lo := bits.Mul64(u.Lo, v.Lo)
 	hi += u.Hi*v.Lo + u.Lo*v.Hi
-	return Uint128{lo, hi}
+	return Uint128{Lo: lo, Hi: hi}
 }
 
-// Mul64 returns u*v, panicking on overflow.
+// Mul64 returns multiplication (u*v) of 128-bit and 64-bit values.
+// Wrap-around semantic is used here: Max().Mul64(2) == Max().Sub64(1).
 func (u Uint128) Mul64(v uint64) Uint128 {
 	hi, lo := bits.Mul64(u.Lo, v)
-	p0, p1 := bits.Mul64(u.Hi, v)
-	hi, c0 := bits.Add64(hi, p1, 0)
-	if p0 != 0 || c0 != 0 {
-		panic("overflow")
+	return Uint128{
+		Lo: lo,
+		Hi: hi + u.Hi*v,
 	}
-	return Uint128{lo, hi}
 }
 
-// MulWrap64 returns u*v with wraparound semantics; for example,
-// Max.MulWrap64(2) == Max.Sub64(1).
-func (u Uint128) MulWrap64(v uint64) Uint128 {
-	hi, lo := bits.Mul64(u.Lo, v)
-	hi += u.Hi * v
-	return Uint128{lo, hi}
-}
-
-// Div returns u/v.
+// Div returns division (u/v) of two 128-bit values.
 func (u Uint128) Div(v Uint128) Uint128 {
 	q, _ := u.QuoRem(v)
 	return q
 }
 
-// Div64 returns u/v.
+// Div64 returns division (u/v) of 128-bit and 64-bit values.
 func (u Uint128) Div64(v uint64) Uint128 {
 	q, _ := u.QuoRem64(v)
 	return q
 }
 
-// QuoRem returns q = u/v and r = u%v.
-func (u Uint128) QuoRem(v Uint128) (q, r Uint128) {
+// Mod returns modulo (u%v) of two 128-bit values.
+func (u Uint128) Mod(v Uint128) Uint128 {
+	_, r := u.QuoRem(v)
+	return r
+}
+
+// Mod64 returns modulo (u%v) of 128-bit and 64-bit values.
+func (u Uint128) Mod64(v uint64) uint64 {
+	_, r := u.QuoRem64(v)
+	return r
+}
+
+// QuoRem returns quotient (u/v) and remainder (u%v) of two 128-bit values.
+func (u Uint128) QuoRem(v Uint128) (Uint128, Uint128) {
 	if v.Hi == 0 {
-		var r64 uint64
-		q, r64 = u.QuoRem64(v.Lo)
-		r = From64(r64)
-	} else {
-		// generate a "trial quotient," guaranteed to be within 1 of the actual
-		// quotient, then adjust.
-		n := uint(bits.LeadingZeros64(v.Hi))
-		v1 := v.Lsh(n)
-		u1 := u.Rsh(1)
-		tq, _ := bits.Div64(u1.Hi, u1.Lo, v1.Hi)
-		tq >>= 63 - n
-		if tq != 0 {
-			tq--
-		}
-		q = From64(tq)
-		// calculate remainder using trial quotient, then adjust if remainder is
-		// greater than divisor
-		r = u.Sub(v.Mul64(tq))
-		if r.Cmp(v) >= 0 {
-			q = q.Add64(1)
-			r = r.Sub(v)
-		}
+		q, r := u.QuoRem64(v.Lo)
+		return q, From64(r)
 	}
-	return
+
+	// generate a "trial quotient," guaranteed to be
+	// within 1 of the actual quotient, then adjust.
+	n := uint(bits.LeadingZeros64(v.Hi))
+	u1, v1 := u.Rsh(1), v.Lsh(n)
+	tq, _ := bits.Div64(u1.Hi, u1.Lo, v1.Hi)
+	tq >>= 63 - n
+	if tq != 0 {
+		tq--
+	}
+
+	// calculate remainder using trial quotient, then
+	// adjust if remainder is greater than divisor
+	q, r := From64(tq), u.Sub(v.Mul64(tq))
+	if r.Cmp(v) >= 0 {
+		q = q.Add64(1)
+		r = r.Sub(v)
+	}
+
+	return q, r
 }
 
-// QuoRem64 returns q = u/v and r = u%v.
-func (u Uint128) QuoRem64(v uint64) (q Uint128, r uint64) {
+// QuoRem64 returns quotient (u/v) and remainder (u%v) of 128-bit and 64-bit values.
+func (u Uint128) QuoRem64(v uint64) (Uint128, uint64) {
 	if u.Hi < v {
-		q.Lo, r = bits.Div64(u.Hi, u.Lo, v)
-	} else {
-		q.Hi, r = bits.Div64(0, u.Hi, v)
-		q.Lo, r = bits.Div64(r, u.Lo, v)
+		lo, r := bits.Div64(u.Hi, u.Lo, v)
+		return Uint128{Lo: lo}, r
 	}
-	return
+
+	hi, r := bits.Div64(0, u.Hi, v)
+	lo, r := bits.Div64(r, u.Lo, v)
+	return Uint128{Lo: lo, Hi: hi}, r
 }
 
-// Mod returns r = u%v.
-func (u Uint128) Mod(v Uint128) (r Uint128) {
-	_, r = u.QuoRem(v)
-	return
-}
+///////////////////////////////////////////////////////////////////////////////
+/// shift operators ///////////////////////////////////////////////////////////
 
-// Mod64 returns r = u%v.
-func (u Uint128) Mod64(v uint64) (r uint64) {
-	_, r = u.QuoRem64(v)
-	return
-}
-
-// Lsh returns u<<n.
-func (u Uint128) Lsh(n uint) (s Uint128) {
+// Lsh returns left shift (u<<n).
+func (u Uint128) Lsh(n uint) Uint128 {
 	if n > 64 {
-		s.Lo = 0
-		s.Hi = u.Lo << (n - 64)
-	} else {
-		s.Lo = u.Lo << n
-		s.Hi = u.Hi<<n | u.Lo>>(64-n)
+		return Uint128{
+			// Lo: 0,
+			Hi: u.Lo << (n - 64),
+		}
 	}
-	return
+
+	return Uint128{
+		Lo: u.Lo << n,
+		Hi: u.Hi<<n | u.Lo>>(64-n),
+	}
 }
 
-// Rsh returns u>>n.
-func (u Uint128) Rsh(n uint) (s Uint128) {
+// Rsh returns right shift (u>>n).
+func (u Uint128) Rsh(n uint) Uint128 {
 	if n > 64 {
-		s.Lo = u.Hi >> (n - 64)
-		s.Hi = 0
-	} else {
-		s.Lo = u.Lo>>n | u.Hi<<(64-n)
-		s.Hi = u.Hi >> n
+		return Uint128{
+			Lo: u.Hi >> (n - 64),
+			// Hi: 0,
+		}
 	}
-	return
-}
 
-// LeadingZeros returns the number of leading zero bits in u; the result is 128
-// for u == 0.
-func (u Uint128) LeadingZeros() int {
-	if u.Hi > 0 {
-		return bits.LeadingZeros64(u.Hi)
+	return Uint128{
+		Lo: u.Lo>>n | u.Hi<<(64-n),
+		Hi: u.Hi >> n,
 	}
-	return 64 + bits.LeadingZeros64(u.Lo)
-}
-
-// TrailingZeros returns the number of trailing zero bits in u; the result is
-// 128 for u == 0.
-func (u Uint128) TrailingZeros() int {
-	if u.Lo > 0 {
-		return bits.TrailingZeros64(u.Lo)
-	}
-	return 64 + bits.TrailingZeros64(u.Hi)
-}
-
-// OnesCount returns the number of one bits ("population count") in u.
-func (u Uint128) OnesCount() int {
-	return bits.OnesCount64(u.Hi) + bits.OnesCount64(u.Lo)
 }
 
 // RotateLeft returns the value of u rotated left by (k mod 128) bits.
 func (u Uint128) RotateLeft(k int) Uint128 {
 	const n = 128
 	s := uint(k) & (n - 1)
-	return u.Lsh(s).Or(u.Rsh(n - s))
+	return u.Lsh(s).Or(u.Rsh(n - s)) // TODO: consider to optimize this
 }
 
 // RotateRight returns the value of u rotated left by (k mod 128) bits.
@@ -348,116 +367,54 @@ func (u Uint128) RotateRight(k int) Uint128 {
 	return u.RotateLeft(-k)
 }
 
-// Reverse returns the value of u with its bits in reversed order.
-func (u Uint128) Reverse() Uint128 {
-	return Uint128{bits.Reverse64(u.Hi), bits.Reverse64(u.Lo)}
-}
+///////////////////////////////////////////////////////////////////////////////
+/// bit counting //////////////////////////////////////////////////////////////
 
-// ReverseBytes returns the value of u with its bytes in reversed order.
-func (u Uint128) ReverseBytes() Uint128 {
-	return Uint128{bits.ReverseBytes64(u.Hi), bits.ReverseBytes64(u.Lo)}
-}
-
-// Len returns the minimum number of bits required to represent u; the result is
-// 0 for u == 0.
-// Deprecated: use u.BitLen() instead!
-func (u Uint128) Len() int {
-	return u.BitLen()
-}
-
-// BitLen returns the minimum number of bits required to represent u; the result is
-// 0 for u == 0.
+// BitLen returns the minimum number of bits required to represent 128-bit value.
+// The result is 0 for u == 0.
 func (u Uint128) BitLen() int {
-	return 128 - u.LeadingZeros()
-}
-
-// String returns the base-10 representation of u as a string.
-func (u Uint128) String() string {
-	if u.IsZero() {
-		return "0"
+	if u.Hi != 0 {
+		return 64 + bits.Len64(u.Hi)
 	}
-	buf := []byte("0000000000000000000000000000000000000000") // log10(2^128) < 40
-	for i := len(buf); ; i -= 19 {
-		q, r := u.QuoRem64(1e19) // largest power of 10 that fits in a uint64
-		var n int
-		for ; r != 0; r /= 10 {
-			n++
-			buf[i-n] += byte(r % 10)
-		}
-		if q.IsZero() {
-			return string(buf[i-n:])
-		}
-		u = q
+	return bits.Len64(u.Lo)
+}
+
+// LeadingZeros returns the number of leading zero bits.
+// The result is 128 for u == 0.
+func (u Uint128) LeadingZeros() int {
+	if u.Hi != 0 {
+		return bits.LeadingZeros64(u.Hi)
+	}
+	return 64 + bits.LeadingZeros64(u.Lo)
+}
+
+// TrailingZeros returns the number of trailing zero bits.
+// The result is 128 for u == 0.
+func (u Uint128) TrailingZeros() int {
+	if u.Lo != 0 {
+		return bits.TrailingZeros64(u.Lo)
+	}
+	return 64 + bits.TrailingZeros64(u.Hi)
+}
+
+// OnesCount returns the number of one bits ("population count").
+func (u Uint128) OnesCount() int {
+	return bits.OnesCount64(u.Lo) +
+		bits.OnesCount64(u.Hi)
+}
+
+// Reverse returns the value with bits in reversed order.
+func (u Uint128) Reverse() Uint128 {
+	return Uint128{
+		Lo: bits.Reverse64(u.Hi),
+		Hi: bits.Reverse64(u.Lo),
 	}
 }
 
-// PutBytes stores u in b in little-endian order. It panics if len(b) < 16.
-func (u Uint128) PutBytes(b []byte) {
-	// little-endian order is used by default
-	u.PutBytesLE(b)
-}
-
-// PutBytesLE stores u in b in little-endian order. It panics if len(b) < 16.
-func (u Uint128) PutBytesLE(b []byte) {
-	binary.LittleEndian.PutUint64(b[:8], u.Lo)
-	binary.LittleEndian.PutUint64(b[8:], u.Hi)
-}
-
-// PutBytesBE stores u in b in big-endian order. It panics if len(b) < 16.
-func (u Uint128) PutBytesBE(b []byte) {
-	binary.BigEndian.PutUint64(b[:8], u.Hi)
-	binary.BigEndian.PutUint64(b[8:], u.Lo)
-}
-
-// Big returns u as a *big.Int.
-func (u Uint128) Big() *big.Int {
-	i := new(big.Int).SetUint64(u.Hi)
-	i = i.Lsh(i, 64)
-	i = i.Xor(i, new(big.Int).SetUint64(u.Lo))
-	return i
-}
-
-// New returns the Uint128 value (lo,hi).
-func New(lo, hi uint64) Uint128 {
-	return Uint128{lo, hi}
-}
-
-// From64 converts v to a Uint128 value.
-func From64(v uint64) Uint128 {
-	return New(v, 0)
-}
-
-// FromBytes converts b to a Uint128 value (little-endian order).
-func FromBytes(b []byte) Uint128 {
-	// little-endian order is used by default
-	return FromBytesLE(b)
-}
-
-// FromBytesLE converts b to a Uint128 value (little-endian order).
-func FromBytesLE(b []byte) Uint128 {
-	return New(
-		binary.LittleEndian.Uint64(b[:8]),
-		binary.LittleEndian.Uint64(b[8:]),
-	)
-}
-
-// FromBytesBE converts b to a Uint128 value (big-endian order).
-func FromBytesBE(b []byte) Uint128 {
-	return New(
-		binary.BigEndian.Uint64(b[8:]),
-		binary.BigEndian.Uint64(b[:8]),
-	)
-}
-
-// FromBig converts i to a Uint128 value. It panics if i is negative or
-// overflows 128 bits.
-func FromBig(i *big.Int) (u Uint128) {
-	if i.Sign() < 0 {
-		panic("value cannot be negative")
-	} else if i.BitLen() > 128 {
-		panic("value overflows Uint128")
+// ReverseBytes returns the value with bytes in reversed order.
+func (u Uint128) ReverseBytes() Uint128 {
+	return Uint128{
+		Lo: bits.ReverseBytes64(u.Hi),
+		Hi: bits.ReverseBytes64(u.Lo),
 	}
-	u.Lo = i.Uint64()
-	u.Hi = new(big.Int).Rsh(i, 64).Uint64()
-	return u
 }
