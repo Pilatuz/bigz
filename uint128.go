@@ -90,6 +90,16 @@ func (u Uint128) Or64(v uint64) Uint128 {
 	return Uint128{u.Lo | v, u.Hi | 0}
 }
 
+// Not returns ^v.
+func (u Uint128) Not() Uint128 {
+	return Uint128{^u.Lo, ^u.Hi}
+}
+
+// AndNot returns u&^v.
+func (u Uint128) AndNot(v Uint128) Uint128 {
+	return Uint128{u.Lo & ^v.Lo, u.Hi & ^v.Hi}
+}
+
 // Xor returns u^v.
 func (u Uint128) Xor(v Uint128) Uint128 {
 	return Uint128{u.Lo ^ v.Lo, u.Hi ^ v.Hi}

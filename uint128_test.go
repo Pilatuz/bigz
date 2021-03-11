@@ -121,6 +121,14 @@ func TestArithmetic(t *testing.T) {
 			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
 		}
 	}
+	checkUnOp := func(x Uint128, op string, fn func(x Uint128) Uint128, fnb func(z, x *big.Int) *big.Int) {
+		t.Helper()
+		r := fn(x)
+		rb := mod128(fnb(new(big.Int), x.Big()))
+		if r.Big().Cmp(rb) != 0 {
+			t.Fatalf("mismatch: %v%v should equal %v, got %v", x, op, rb, r)
+		}
+	}
 	checkBinOp := func(x Uint128, op string, y Uint128, fn func(x, y Uint128) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
 		t.Helper()
 		r := fn(x, y)
@@ -200,6 +208,8 @@ func TestArithmetic(t *testing.T) {
 			checkBinOp(x, "/", y, Uint128.Div, (*big.Int).Div)
 			checkBinOp(x, "%", y, Uint128.Mod, (*big.Int).Mod)
 		}
+		checkUnOp(x, "~", Uint128.Not, (*big.Int).Not)
+		checkBinOp(x, "&^", y, Uint128.AndNot, (*big.Int).AndNot)
 		checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
 		checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
 		checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
