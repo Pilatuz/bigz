@@ -36,7 +36,7 @@ type Uint128 struct {
 }
 
 // Note, there in no New(lo, hi) just not to confuse
-// which half goes first: lower or hight.
+// which half goes first: lower or higher.
 // Use structure initialization Uint128{Lo: ..., Hi: ...} instead.
 
 // From64 converts 64-bit value v to a Uint128 value.
