@@ -2,388 +2,238 @@ package uint128
 
 import (
 	"crypto/rand"
-	"encoding/binary"
+	"math"
 	"math/big"
 	"testing"
 )
 
-func randUint128() Uint128 {
-	randBuf := make([]byte, 16)
-	rand.Read(randBuf)
-	return FromBytes(randBuf)
-}
-
-func TestUint128(t *testing.T) {
-	// test non-arithmetic methods
-	for i := 0; i < 1000; i++ {
-		x, y := randUint128(), randUint128()
-		if i%3 == 0 {
-			x = x.Rsh(64)
-		} else if i%7 == 0 {
-			x = x.Lsh(64)
-		} else if i%9 == 0 {
-			y = y.Rsh(64)
-		} else if i%21 == 0 {
-			y = y.Lsh(64)
-		} else if i%41 == 0 {
-			x.Hi = 0
-			y.Hi = 0
-		}
-
-		if FromBig(x.Big()) != x {
-			t.Fatal("FromBig is not the inverse of Big for", x)
-		}
-
-		b := make([]byte, 16)
-		x.PutBytes(b) // also check PutBytesLE and FromBytesLE
-		if FromBytes(b) != x {
-			t.Fatal("FromBytes is not the inverse of PutBytes for", x)
-		}
-		for i, n := 0, len(b); i < n/2; i++ { // reverse byte order manually:
-			b[i], b[n-i-1] = b[n-i-1], b[i] // little-endian to big-endian
-		}
-		if FromBytesBE(b) != x {
-			t.Fatal("FromBytesBE is not the inverse of reverse(PutBytes) for", x)
-		}
-		x.PutBytesBE(b)
-		if FromBytesBE(b) != x {
-			t.Fatal("FromBytesBE is not the inverse of PutBytesBE for", x)
-		}
-		if FromBytesLE(b) != x.ReverseBytes() {
-			t.Fatal("FromBytesLE is not the inverse of PutBytesBE.ReverseBytes for", x)
-		}
-
-		if !x.Equals(x) {
-			t.Fatalf("%v does not equal itself", x.Lo)
-		}
-		if !From64(x.Lo).Equals64(x.Lo) {
-			t.Fatalf("%v does not equal itself", x.Lo)
-		}
-
-		if x.Cmp(y) != x.Big().Cmp(y.Big()) {
-			t.Fatalf("mismatch: cmp(%v,%v) should equal %v, got %v", x, y, x.Big().Cmp(y.Big()), x.Cmp(y))
-		} else if x.Cmp(x) != 0 {
-			t.Fatalf("%v does not equal itself", x)
-		}
-
-		if x.Cmp64(y.Lo) != x.Big().Cmp(From64(y.Lo).Big()) {
-			t.Fatalf("mismatch: cmp64(%v,%v) should equal %v, got %v", x, y.Lo, x.Big().Cmp(From64(y.Lo).Big()), x.Cmp64(y.Lo))
-		} else if From64(x.Lo).Cmp64(x.Lo) != 0 {
-			t.Fatalf("%v does not equal itself", x.Lo)
-		}
-	}
-
-	// Check FromBig
-	if got := FromBig(nil); !got.Equals(Zero()) {
-		t.Fatalf("FromBig(nil) does not equal to 0, got: %v", got)
-	}
-	if got := FromBig(big.NewInt(-1)); !got.Equals(Zero()) {
-		t.Fatalf("FromBig(-1) does not equal to 0, got: %v", got)
-	}
-	if got := FromBig(new(big.Int).Lsh(big.NewInt(1), 129)); !got.Equals(Max()) {
-		t.Fatalf("FromBig(2^129) does not equal to Max(), got: %v", got)
-	}
-}
-
-func TestArithmetic(t *testing.T) {
-	// compare Uint128 arithmetic methods to their math/big equivalents, using
-	// random values
-	randBuf := make([]byte, 17)
-	randUint128 := func() Uint128 {
-		rand.Read(randBuf)
-		var Lo, Hi uint64
-		if randBuf[16]&1 != 0 {
-			Lo = binary.LittleEndian.Uint64(randBuf[:8])
-		}
-		if randBuf[16]&2 != 0 {
-			Hi = binary.LittleEndian.Uint64(randBuf[8:])
-		}
-		return Uint128{Lo, Hi}
-	}
-	mod128 := func(i *big.Int) *big.Int {
-		// wraparound semantics
-		if i.Sign() == -1 {
-			i = i.Add(new(big.Int).Lsh(big.NewInt(1), 128), i)
-		}
-		_, rem := i.QuoRem(i, new(big.Int).Lsh(big.NewInt(1), 128), new(big.Int))
-		return rem
-	}
-	checkUnOp := func(x Uint128, op string, fn func(x Uint128) Uint128, fnb func(z, x *big.Int) *big.Int) {
-		t.Helper()
-		r := fn(x)
-		rb := mod128(fnb(new(big.Int), x.Big()))
-		if r.Big().Cmp(rb) != 0 {
-			t.Fatalf("mismatch: %v%v should equal %v, got %v", x, op, rb, r)
-		}
-	}
-	checkBinOp := func(x Uint128, op string, y Uint128, fn func(x, y Uint128) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
-		t.Helper()
-		r := fn(x, y)
-		rb := mod128(fnb(new(big.Int), x.Big(), y.Big()))
-		if r.Big().Cmp(rb) != 0 {
-			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
-		}
-	}
-	checkShiftOp := func(x Uint128, op string, n uint, fn func(x Uint128, n uint) Uint128, fnb func(z, x *big.Int, n uint) *big.Int) {
-		t.Helper()
-		r := fn(x, n)
-		rb := mod128(fnb(new(big.Int), x.Big(), n))
-		if r.Big().Cmp(rb) != 0 {
-			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, n, rb, r)
-		}
-	}
-	checkBinOp64 := func(x Uint128, op string, y uint64, fn func(x Uint128, y uint64) Uint128, fnb func(z, x, y *big.Int) *big.Int) {
-		t.Helper()
-		xb, yb := x.Big(), From64(y).Big()
-		r := fn(x, y)
-		rb := mod128(fnb(new(big.Int), xb, yb))
-		if r.Big().Cmp(rb) != 0 {
-			t.Fatalf("mismatch: %v%v%v should equal %v, got %v", x, op, y, rb, r)
-		}
-	}
-	checkBits := func(x Uint128, k int) {
-		b := b128FromBig(x.Big())
-		if expected, got := b.LeadingZeros(), x.LeadingZeros(); got != expected {
-			t.Errorf("mismatch: %v LeadingZeros should equal %v, got %v", x, expected, got)
-		}
-		if expected, got := b.TrailingZeros(), x.TrailingZeros(); got != expected {
-			t.Errorf("mismatch: %v TrailingZeros should equal %v, got %v", x, expected, got)
-		}
-		if expected, got := b.OnesCount(), x.OnesCount(); got != expected {
-			t.Errorf("mismatch: %v OnesCount should equal %v, got %v", x, expected, got)
-		}
-		if expected, got := b.RotateRight(k), b128FromBig(x.RotateRight(k).Big()); !expected.Equals(got) {
-			t.Errorf("mismatch: %v RotateRight should equal %v, got %v", x, expected, got)
-		}
-		if expected, got := b.RotateLeft(k), b128FromBig(x.RotateLeft(k).Big()); !expected.Equals(got) {
-			t.Errorf("mismatch: %v RotateLeft should equal %v, got %v", x, expected, got)
-		}
-		if expected, got := b.Reverse(), b128FromBig(x.Reverse().Big()); !expected.Equals(got) {
-			t.Errorf("mismatch: %v RotateRight should equal %v, got %v", x, expected, got)
-		}
-		if expected, got := x.Big().BitLen(), x.BitLen(); expected != got {
-			t.Errorf("mismatch: %v BitLen should equal %v, got %v", x, expected, got)
-		}
-	}
-	for i := 0; i < 1000; i++ {
-		x, y, z := randUint128(), randUint128(), uint(randUint128().Lo&0xFF)
-		checkBinOp(x, "+", y, Uint128.Add, (*big.Int).Add)
-		checkBinOp(x, "-", y, Uint128.Sub, (*big.Int).Sub)
-		checkBinOp(x, "*", y, Uint128.Mul, (*big.Int).Mul)
-		if !y.IsZero() {
-			checkBinOp(x, "/", y, Uint128.Div, (*big.Int).Div)
-			checkBinOp(x, "%", y, Uint128.Mod, (*big.Int).Mod)
-		}
-		checkUnOp(x, "~", Uint128.Not, (*big.Int).Not)
-		checkBinOp(x, "&^", y, Uint128.AndNot, (*big.Int).AndNot)
-		checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
-		checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
-		checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
-		checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
-		checkShiftOp(x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
-
-		// check 64-bit variants
-		y64 := y.Lo
-		checkBinOp64(x, "+", y64, Uint128.Add64, (*big.Int).Add)
-		checkBinOp64(x, "-", y64, Uint128.Sub64, (*big.Int).Sub)
-		checkBinOp64(x, "*", y64, Uint128.Mul64, (*big.Int).Mul)
-		if y64 != 0 {
-			checkBinOp64(x, "/", y64, Uint128.Div64, (*big.Int).Div)
-			modfn := func(x Uint128, y uint64) Uint128 {
-				return From64(x.Mod64(y))
-			}
-			checkBinOp64(x, "%", y64, modfn, (*big.Int).Mod)
-		}
-		checkBinOp64(x, "&^", y64, Uint128.AndNot64, (*big.Int).AndNot)
-		checkBinOp64(x, "&", y64, Uint128.And64, (*big.Int).And)
-		checkBinOp64(x, "|", y64, Uint128.Or64, (*big.Int).Or)
-		checkBinOp64(x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
-
-		// check bits
-		checkBits(x, int(z))
-		checkBits(y, int(z))
-	}
-}
-
-func TestString(t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		x := randUint128()
-		if x.String() != x.Big().String() {
-			t.Fatalf("mismatch:\n%v !=\n%v", x.String(), x.Big().String())
-		}
-	}
-	// Test 0 string
-	if got := Zero().String(); got != "0" {
-		t.Fatalf(`Zero.String() should be "0", got %q`, got)
-	}
-	// Test Max string
-	if got := Max().String(); got != "340282366920938463463374607431768211455" {
-		t.Fatalf(`Max.String() should be "0", got %q`, got)
-	}
-}
-
-func BenchmarkArithmetic(b *testing.B) {
-	randBuf := make([]byte, 17)
-	randUint128 := func() Uint128 {
-		rand.Read(randBuf)
-		var Lo, Hi uint64
-		if randBuf[16]&1 != 0 {
-			Lo = binary.LittleEndian.Uint64(randBuf[:8])
-		}
-		if randBuf[16]&2 != 0 {
-			Hi = binary.LittleEndian.Uint64(randBuf[8:])
-		}
-		return Uint128{Lo, Hi}
-	}
-	x, y := randUint128(), randUint128()
-
-	b.Run("Add native", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = x.Lo * y.Lo
-		}
-	})
-
-	b.Run("Add", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x.Add(y)
-		}
-	})
-
-	b.Run("Sub", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x.Sub(y)
-		}
-	})
-
-	b.Run("Mul", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x.Mul(y)
-		}
-	})
-
-	b.Run("Lsh", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x.Lsh(17)
-		}
-	})
-
-	b.Run("Rsh", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x.Rsh(17)
-		}
-	})
-
-	b.Run("Cmp64", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x.Cmp64(y.Lo)
-		}
-	})
-}
-
-func BenchmarkDivision(b *testing.B) {
-	randBuf := make([]byte, 8)
-	randU64 := func() uint64 {
-		rand.Read(randBuf)
-		return binary.LittleEndian.Uint64(randBuf) | 3 // avoid divide-by-zero
-	}
-	x64 := From64(randU64())
-	y64 := From64(randU64())
-	x128 := Uint128{randU64(), randU64()}
-	y128 := Uint128{randU64(), randU64()}
-
-	b.Run("native 64/64", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = x64.Lo / y64.Lo
-		}
-	})
-	b.Run("Div64 64/64", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x64.Div64(y64.Lo)
-		}
-	})
-	b.Run("Div64 128/64", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x128.Div64(y64.Lo)
-		}
-	})
-	b.Run("Div 64/64", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x64.Div(y64)
-		}
-	})
-	b.Run("Div 128/64-Lo", func(b *testing.B) {
-		x := x128
-		x.Hi = y64.Lo - 1
-		for i := 0; i < b.N; i++ {
-			x.Div(y64)
-		}
-	})
-	b.Run("Div 128/64-Hi", func(b *testing.B) {
-		x := x128
-		x.Hi = y64.Lo + 1
-		for i := 0; i < b.N; i++ {
-			x.Div(y64)
-		}
-	})
-	b.Run("Div 128/128", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			x128.Div(y128)
-		}
-	})
-	b.Run("big.Int 128/64", func(b *testing.B) {
-		xb, yb := x128.Big(), y64.Big()
-		q := new(big.Int)
-		for i := 0; i < b.N; i++ {
-			q = q.Div(xb, yb)
-		}
-	})
-	b.Run("big.Int 128/128", func(b *testing.B) {
-		xb, yb := x128.Big(), y128.Big()
-		q := new(big.Int)
-		for i := 0; i < b.N; i++ {
-			q = q.Div(xb, yb)
-		}
-	})
-}
-
-func BenchmarkString(b *testing.B) {
-	buf := make([]byte, 16)
+// rand128 generates single Uint128 random value.
+func rand128() Uint128 {
+	buf := make([]byte, 16+1) // one extra random byte!
 	rand.Read(buf)
-	x := Uint128{
-		binary.LittleEndian.Uint64(buf[:8]),
-		binary.LittleEndian.Uint64(buf[8:]),
+	u := LoadUint128LE(buf)
+	if buf[16]&0x07 == 0 {
+		u.Lo = 0 // reset lower half
 	}
-	xb := x.Big()
-	b.Run("Uint128", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_ = x.String()
+	if buf[16]&0x70 == 0 {
+		u.Hi = 0 // reset higher half
+	}
+	return u
+}
+
+// generate128s generates a series of pseudo-random Uint128 values
+func generate128s(count int, values chan Uint128) {
+	defer close(values)
+
+	// a few fixed values
+	fixed := []uint64{0, 1, 2, math.MaxUint64 - 1, math.MaxUint64}
+	for _, hi := range fixed {
+		for _, lo := range fixed {
+			values <- Uint128{Lo: lo, Hi: hi}
+		}
+	}
+
+	// a few random values
+	for i := 0; i < count; i++ {
+		values <- rand128()
+	}
+}
+
+// TestUint128Helpers unit tests for various Uint128 helpers.
+func TestUint128Helpers(t *testing.T) {
+	t.Run("FromBig", func(t *testing.T) {
+		if got := FromBig(nil); !got.Equals(Zero()) {
+			t.Fatalf("FromBig(nil) does not equal to 0, got %#x", got)
+		}
+
+		if got := FromBig(big.NewInt(-1)); !got.Equals(Zero()) {
+			t.Fatalf("FromBig(-1) does not equal to 0, got %#x", got)
+		}
+
+		if got := FromBig(new(big.Int).Lsh(big.NewInt(1), 129)); !got.Equals(Max()) {
+			t.Fatalf("FromBig(2^129) does not equal to Max(), got %#x", got)
 		}
 	})
-	b.Run("big.Int", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = xb.String()
+
+	t.Run("rand", func(t *testing.T) {
+		values := make(chan Uint128)
+		go generate128s(1000, values)
+		for x := range values {
+			if got := FromBig(x.Big()); got != x {
+				t.Fatalf("FromBig is not the inverse of Big for #%x, got %#x", x, got)
+			}
+
+			if !x.Equals(x) {
+				t.Fatalf("%#x does not equal itself", x)
+			}
+			if !From64(x.Lo).Equals64(x.Lo) {
+				t.Fatalf("%#v does not equal64 itself", x)
+			}
 		}
 	})
 }
 
-// raw 128 bits
-type b128 [128]bool
+// TestUint128Bits unit tests for bit counting helpers.
+func TestUint128Bits(t *testing.T) {
+	t.Run("rand", func(t *testing.T) {
+		values := make(chan Uint128)
+		go generate128s(1000, values)
+		for x := range values {
+			d := newDummy128(x.Big())
+			k := int(x.Lo & 0xFF)
 
-func b128FromBig(b *big.Int) b128 {
+			if expected, got := d.LeadingZeros(), x.LeadingZeros(); got != expected {
+				t.Errorf("mismatch: %#x LeadingZeros should equal %v, got %v", x, expected, got)
+			}
+			if expected, got := d.TrailingZeros(), x.TrailingZeros(); got != expected {
+				t.Errorf("mismatch: %#x TrailingZeros should equal %v, got %v", x, expected, got)
+			}
+			if expected, got := d.OnesCount(), x.OnesCount(); got != expected {
+				t.Errorf("mismatch: %#x OnesCount should equal %v, got %v", x, expected, got)
+			}
+			if expected, got := d.RotateRight(k), newDummy128(x.RotateRight(k).Big()); !expected.Equals(got) {
+				t.Errorf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
+			}
+			if expected, got := d.RotateLeft(k), newDummy128(x.RotateLeft(k).Big()); !expected.Equals(got) {
+				t.Errorf("mismatch: %#x RotateLeft should equal %v, got %v", x, expected, got)
+			}
+			if expected, got := d.Reverse(), newDummy128(x.Reverse().Big()); !expected.Equals(got) {
+				t.Errorf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
+			}
+			if expected, got := x.Big().BitLen(), x.BitLen(); expected != got {
+				t.Errorf("mismatch: %#x BitLen should equal %v, got %v", x, expected, got)
+			}
+		}
+	})
+}
+
+// TestArithmetic compare Uint128 arithmetic methods to their math/big equivalents
+func TestArithmetic(t *testing.T) {
+	// big.Int 2^128 wraparound semantics
+	bigOne := big.NewInt(1)                     // = 1
+	bigMod := new(big.Int).Lsh(bigOne, 128)     // = 2^128
+	bigMask := new(big.Int).Sub(bigMod, bigOne) // = 2^128 - 1
+	mod128 := func(i *big.Int) *big.Int {
+		if i.Sign() < 0 {
+			i = i.Add(i, bigMod) // just add 2^128 to make it positive
+		}
+		return i.And(i, bigMask)
+	}
+
+	type (
+		BinOp    func(x, y Uint128) Uint128
+		BinOp64  func(x Uint128, y uint64) Uint128
+		BigBinOp func(z, x, y *big.Int) *big.Int
+
+		ShiftOp    func(x Uint128, n uint) Uint128
+		BigShiftOp func(z, x *big.Int, n uint) *big.Int
+	)
+
+	// z = op(x, y)
+	checkBinOp := func(x Uint128, op string, y Uint128, fn BinOp, fnb BigBinOp) {
+		t.Helper()
+		expected := mod128(fnb(new(big.Int), x.Big(), y.Big()))
+		if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
+			t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
+		}
+	}
+	checkBinOp64 := func(x Uint128, op string, y uint64, fn BinOp64, fnb BigBinOp) {
+		t.Helper()
+		expected := mod128(fnb(new(big.Int), x.Big(), From64(y).Big()))
+		if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
+			t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
+		}
+	}
+
+	// z = op(x, n)
+	checkShiftOp := func(x Uint128, op string, n uint, fn ShiftOp, fnb BigShiftOp) {
+		t.Helper()
+		expected := mod128(fnb(new(big.Int), x.Big(), n))
+		if got := fn(x, n); expected.Cmp(got.Big()) != 0 {
+			t.Fatalf("mismatch: (%#x %v %v) should equal %#x, got %#x", x, op, n, expected, got)
+		}
+	}
+
+	xvalues := make(chan Uint128)
+	go generate128s(200, xvalues)
+	for x := range xvalues {
+		yvalues := make(chan Uint128)
+		go generate128s(200, yvalues)
+		for y := range yvalues {
+			// 128 op 128
+			checkBinOp(x, "+", y, Uint128.Add, (*big.Int).Add)
+			checkBinOp(x, "-", y, Uint128.Sub, (*big.Int).Sub)
+			checkBinOp(x, "*", y, Uint128.Mul, (*big.Int).Mul)
+			if !y.IsZero() {
+				checkBinOp(x, "/", y, Uint128.Div, (*big.Int).Div)
+				checkBinOp(x, "%", y, Uint128.Mod, (*big.Int).Mod)
+			}
+			checkBinOp(x, "&^", y, Uint128.AndNot, (*big.Int).AndNot)
+			checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
+			checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
+			checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
+			if expected, got := x.Big().Cmp(y.Big()), x.Cmp(y); expected != got {
+				t.Fatalf("mismatch: cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
+			}
+
+			// 128 op 64
+			y64 := y.Lo
+			checkBinOp64(x, "+", y64, Uint128.Add64, (*big.Int).Add)
+			checkBinOp64(x, "-", y64, Uint128.Sub64, (*big.Int).Sub)
+			checkBinOp64(x, "*", y64, Uint128.Mul64, (*big.Int).Mul)
+			if y64 != 0 {
+				mod64 := func(x Uint128, y uint64) Uint128 {
+					return From64(x.Mod64(y)) // helper to fix signature
+				}
+				checkBinOp64(x, "/", y64, Uint128.Div64, (*big.Int).Div)
+				checkBinOp64(x, "%", y64, mod64, (*big.Int).Mod)
+			}
+			checkBinOp64(x, "&^", y64, Uint128.AndNot64, (*big.Int).AndNot)
+			checkBinOp64(x, "&", y64, Uint128.And64, (*big.Int).And)
+			checkBinOp64(x, "|", y64, Uint128.Or64, (*big.Int).Or)
+			checkBinOp64(x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
+			if expected, got := x.Big().Cmp(From64(y64).Big()), x.Cmp64(y64); expected != got {
+				t.Fatalf("mismatch: cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
+			}
+
+			// shift op
+			z := uint(y.Lo & 0xFF)
+			checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
+			checkShiftOp(x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
+		}
+
+		// unary Cmp
+		if got := x.Cmp(x); got != 0 {
+			t.Fatalf("%#x does not equal itself, got %v", x, got)
+		}
+		if got := From64(x.Lo).Cmp64(x.Lo); got != 0 {
+			t.Fatalf("%#x does not equal itself, got %v", x.Lo, got)
+		}
+
+		// unary Not
+		if expected, got := mod128(new(big.Int).Not(x.Big())), x.Not(); expected.Cmp(got.Big()) != 0 {
+			t.Fatalf("mismatch: (%v %#x) should equal %#x, got %#x", "~", x, expected, got)
+		}
+	}
+}
+
+// dummy raw 128 bits
+type dummy128 [128]bool
+
+func newDummy128(b *big.Int) dummy128 {
 	n := b.BitLen()
 	if n > 128 {
 		n = 128 // truncate
 	}
 
-	var out b128
+	var out dummy128
 	for i := 0; i < n; i++ {
 		out[i] = (b.Bit(i) != 0)
 	}
 	return out
 }
 
-func (u b128) Equals(v b128) bool {
+func (u dummy128) Equals(v dummy128) bool {
 	for i := range u {
 		if u[i] != v[i] {
 			return false
@@ -392,11 +242,11 @@ func (u b128) Equals(v b128) bool {
 	return true
 }
 
-func (u b128) LeadingZeros() int {
+func (u dummy128) LeadingZeros() int {
 	return u.Reverse().TrailingZeros()
 }
 
-func (u b128) TrailingZeros() int {
+func (u dummy128) TrailingZeros() int {
 	var out int
 	for i := range u {
 		if u[i] {
@@ -407,7 +257,7 @@ func (u b128) TrailingZeros() int {
 	return out
 }
 
-func (u b128) OnesCount() int {
+func (u dummy128) OnesCount() int {
 	var out int
 	for i := range u {
 		if u[i] {
@@ -417,24 +267,24 @@ func (u b128) OnesCount() int {
 	return out
 }
 
-func (u b128) RotateLeft(k int) b128 {
-	var out b128
+func (u dummy128) RotateLeft(k int) dummy128 {
+	var out dummy128
 	for i := range u {
-		out[(i+k)%128] = u[i]
+		out[uint(i+k)%128] = u[i]
 	}
 	return out
 }
 
-func (u b128) RotateRight(k int) b128 {
-	var out b128
+func (u dummy128) RotateRight(k int) dummy128 {
+	var out dummy128
 	for i := range u {
-		out[i] = u[(i+k)%128]
+		out[i] = u[uint(i+k)%128]
 	}
 	return out
 }
 
-func (u b128) Reverse() b128 {
-	var out b128
+func (u dummy128) Reverse() dummy128 {
+	var out dummy128
 	for i := range u {
 		out[127-i] = u[i]
 	}

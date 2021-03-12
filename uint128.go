@@ -12,7 +12,12 @@ import (
 
 // Zero is the lowest possible Uint128 value.
 func Zero() Uint128 {
-	return Uint128{0, 0}
+	return From64(0)
+}
+
+// One is the lowest non-zero Uint128 value.
+func One() Uint128 {
+	return From64(1)
 }
 
 // Max is the largest possible Uint128 value.
