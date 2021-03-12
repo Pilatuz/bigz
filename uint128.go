@@ -56,7 +56,7 @@ func FromBig(i *big.Int) Uint128 {
 // FromBigX converts *big.Int to 128-bit Uint128 value (eXtended version).
 // Provides ok successful flag as a second return value.
 // If input integer is negative or overflows 128-bit then ok=false.
-// If input if nil then zero 128-bit returned.
+// If input is nil then zero 128-bit returned.
 func FromBigX(i *big.Int) (Uint128, bool) {
 	switch {
 	case i == nil:

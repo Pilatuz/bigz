@@ -1,21 +1,4 @@
-uint128
--------
-
-[![GoDoc](https://godoc.org/github.com/Pilatuz/uint128?status.svg)](https://godoc.org/github.com/Pilatuz/uint128)
-[![Go Report Card](http://goreportcard.com/badge/github.com/Pilatuz/uint128)](https://goreportcard.com/report/github.com/Pilatuz/uint128)
-
-```
-go get github.com/Pilatuz/uint128
-```
-
-The key differences from [original package](https://github.com/lukechampine/uint128):
-
-- No panics! All methods have wrap-around semantic!
-- `Zero` and `Max` are functions to prevent modification of global variables.
-- `New` was removed to encourage explicit `Uint128{Lo: ..., Hi: ...}` initialization.
-- Trivial (via corresponding `big.Int.Format`) implementation of `Format` method to support for example hex output as `fmt.Sprintf("%X", u)`.
-- Store/Load methods in little-endian and big-endian byte order.
-- New `Not` and `AndNot` methods.
+# uint128 [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][reportcard-img]][reportcard]
 
 `uint128` provides a high-performance `Uint128` type that supports standard arithmetic
 operations. Unlike `math/big`, operations on `Uint128` values always produce new values
@@ -28,28 +11,36 @@ is not recommended, because methods will still return `uint128.Uint128`; this me
 if you want to extend the type with new methods, your best bet is probably to copy the
 source code wholesale and rename the identifier. ¯\\\_(ツ)\_/¯
 
+Released under the [MIT License](LICENSE).
 
-# Benchmarks
+## Installation
 
-Addition, multiplication, and subtraction are on par with their native 64-bit
-equivalents. Division is slower: ~20x slower when dividing a `Uint128` by a
-`uint64`, and ~100x slower when dividing by a `Uint128`. However, division is
-still faster than with `big.Int` (for the same operands), especially when
-dividing by a `uint64`.
-
+```shell
+go get github.com/Pilatuz/uint128
 ```
-BenchmarkArithmetic/Add-4              2000000000    0.45 ns/op    0 B/op      0 allocs/op
-BenchmarkArithmetic/Sub-4              2000000000    0.67 ns/op    0 B/op      0 allocs/op
-BenchmarkArithmetic/Mul-4              2000000000    0.42 ns/op    0 B/op      0 allocs/op
-BenchmarkArithmetic/Lsh-4              2000000000    1.06 ns/op    0 B/op      0 allocs/op
-BenchmarkArithmetic/Rsh-4              2000000000    1.06 ns/op    0 B/op      0 allocs/op
 
-BenchmarkDivision/native_64/64-4       2000000000    0.39 ns/op    0 B/op      0 allocs/op
-BenchmarkDivision/Div_128/64-4         2000000000    6.28 ns/op    0 B/op      0 allocs/op
-BenchmarkDivision/Div_128/128-4        30000000      45.2 ns/op    0 B/op      0 allocs/op
-BenchmarkDivision/big.Int_128/64-4     20000000      98.2 ns/op    8 B/op      1 allocs/op
-BenchmarkDivision/big.Int_128/128-4    30000000      53.4 ns/op    48 B/op     1 allocs/op
+## Differences
 
-BenchmarkString/Uint128-4              10000000      173 ns/op     48 B/op     1 allocs/op
-BenchmarkString/big.Int-4              5000000       350 ns/op     144 B/op    3 allocs/op
-```
+The key differences from [original package](https://github.com/lukechampine/uint128):
+
+- No panics! All methods have wrap-around semantic!
+- `Zero` and `Max` are functions to prevent modification of global variables.
+- `New` was removed to encourage explicit `Uint128{Lo: ..., Hi: ...}` initialization.
+- Trivial (via corresponding `big.Int.Format`) implementation of `Format` method to support for example hex output as `fmt.Sprintf("%X", u)`.
+- Store/Load methods in little-endian and big-endian byte order.
+- New `Not` and `AndNot` methods.
+
+## Quick Start
+
+TBD
+
+See the [documentation][doc] for a complete API specification.
+
+[doc-img]: https://godoc.org/github.com/Pilatuz/uint128?status.svg
+[doc]: https://godoc.org/github.com/Pilatuz/uint128
+[ci-img]: https://travis-ci.com/Pilatuz/uint128.svg?branch=master
+[ci]: https://travis-ci.com/Pilatuz/uint128
+[cov-img]: https://codecov.io/gh/Pilatuz/uint128/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/Pilatuz/uint128
+[reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/uint128
+[reportcard]: https://goreportcard.com/report/github.com/Pilatuz/uint128
