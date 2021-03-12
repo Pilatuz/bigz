@@ -107,53 +107,56 @@ func TestUint128Bits(t *testing.T) {
 	})
 }
 
+// big.Int 2^128 wraparound semantics
+var (
+	bigOne  = big.NewInt(1)                    // = 1
+	bigMod  = new(big.Int).Lsh(bigOne, 128)    // = 2^128
+	bigMask = new(big.Int).Sub(bigMod, bigOne) // = 2^128 - 1
+)
+
+func mod128(i *big.Int) *big.Int {
+	if i.Sign() < 0 {
+		i = i.Add(i, bigMod) // just add 2^128 to make it positive
+	}
+	return i.And(i, bigMask)
+}
+
+type (
+	BinOp    func(x, y Uint128) Uint128
+	BinOp64  func(x Uint128, y uint64) Uint128
+	BigBinOp func(z, x, y *big.Int) *big.Int
+
+	ShiftOp    func(x Uint128, n uint) Uint128
+	BigShiftOp func(z, x *big.Int, n uint) *big.Int
+)
+
+// z = op(x, y)
+func checkBinOp(t *testing.T, x Uint128, op string, y Uint128, fn BinOp, fnb BigBinOp) {
+	t.Helper()
+	expected := mod128(fnb(new(big.Int), x.Big(), y.Big()))
+	if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
+		t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
+	}
+}
+func checkBinOp64(t *testing.T, x Uint128, op string, y uint64, fn BinOp64, fnb BigBinOp) {
+	t.Helper()
+	expected := mod128(fnb(new(big.Int), x.Big(), From64(y).Big()))
+	if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
+		t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
+	}
+}
+
+// z = op(x, n)
+func checkShiftOp(t *testing.T, x Uint128, op string, n uint, fn ShiftOp, fnb BigShiftOp) {
+	t.Helper()
+	expected := mod128(fnb(new(big.Int), x.Big(), n))
+	if got := fn(x, n); expected.Cmp(got.Big()) != 0 {
+		t.Fatalf("mismatch: (%#x %v %v) should equal %#x, got %#x", x, op, n, expected, got)
+	}
+}
+
 // TestArithmetic compare Uint128 arithmetic methods to their math/big equivalents
 func TestArithmetic(t *testing.T) {
-	// big.Int 2^128 wraparound semantics
-	bigOne := big.NewInt(1)                     // = 1
-	bigMod := new(big.Int).Lsh(bigOne, 128)     // = 2^128
-	bigMask := new(big.Int).Sub(bigMod, bigOne) // = 2^128 - 1
-	mod128 := func(i *big.Int) *big.Int {
-		if i.Sign() < 0 {
-			i = i.Add(i, bigMod) // just add 2^128 to make it positive
-		}
-		return i.And(i, bigMask)
-	}
-
-	type (
-		BinOp    func(x, y Uint128) Uint128
-		BinOp64  func(x Uint128, y uint64) Uint128
-		BigBinOp func(z, x, y *big.Int) *big.Int
-
-		ShiftOp    func(x Uint128, n uint) Uint128
-		BigShiftOp func(z, x *big.Int, n uint) *big.Int
-	)
-
-	// z = op(x, y)
-	checkBinOp := func(x Uint128, op string, y Uint128, fn BinOp, fnb BigBinOp) {
-		t.Helper()
-		expected := mod128(fnb(new(big.Int), x.Big(), y.Big()))
-		if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
-			t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
-		}
-	}
-	checkBinOp64 := func(x Uint128, op string, y uint64, fn BinOp64, fnb BigBinOp) {
-		t.Helper()
-		expected := mod128(fnb(new(big.Int), x.Big(), From64(y).Big()))
-		if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
-			t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
-		}
-	}
-
-	// z = op(x, n)
-	checkShiftOp := func(x Uint128, op string, n uint, fn ShiftOp, fnb BigShiftOp) {
-		t.Helper()
-		expected := mod128(fnb(new(big.Int), x.Big(), n))
-		if got := fn(x, n); expected.Cmp(got.Big()) != 0 {
-			t.Fatalf("mismatch: (%#x %v %v) should equal %#x, got %#x", x, op, n, expected, got)
-		}
-	}
-
 	xvalues := make(chan Uint128)
 	go generate128s(200, xvalues)
 	for x := range xvalues {
@@ -161,45 +164,45 @@ func TestArithmetic(t *testing.T) {
 		go generate128s(200, yvalues)
 		for y := range yvalues {
 			// 128 op 128
-			checkBinOp(x, "+", y, Uint128.Add, (*big.Int).Add)
-			checkBinOp(x, "-", y, Uint128.Sub, (*big.Int).Sub)
-			checkBinOp(x, "*", y, Uint128.Mul, (*big.Int).Mul)
+			checkBinOp(t, x, "+", y, Uint128.Add, (*big.Int).Add)
+			checkBinOp(t, x, "-", y, Uint128.Sub, (*big.Int).Sub)
+			checkBinOp(t, x, "*", y, Uint128.Mul, (*big.Int).Mul)
 			if !y.IsZero() {
-				checkBinOp(x, "/", y, Uint128.Div, (*big.Int).Div)
-				checkBinOp(x, "%", y, Uint128.Mod, (*big.Int).Mod)
+				checkBinOp(t, x, "/", y, Uint128.Div, (*big.Int).Div)
+				checkBinOp(t, x, "%", y, Uint128.Mod, (*big.Int).Mod)
 			}
-			checkBinOp(x, "&^", y, Uint128.AndNot, (*big.Int).AndNot)
-			checkBinOp(x, "&", y, Uint128.And, (*big.Int).And)
-			checkBinOp(x, "|", y, Uint128.Or, (*big.Int).Or)
-			checkBinOp(x, "^", y, Uint128.Xor, (*big.Int).Xor)
+			checkBinOp(t, x, "&^", y, Uint128.AndNot, (*big.Int).AndNot)
+			checkBinOp(t, x, "&", y, Uint128.And, (*big.Int).And)
+			checkBinOp(t, x, "|", y, Uint128.Or, (*big.Int).Or)
+			checkBinOp(t, x, "^", y, Uint128.Xor, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(y.Big()), x.Cmp(y); expected != got {
 				t.Fatalf("mismatch: cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
 			}
 
 			// 128 op 64
 			y64 := y.Lo
-			checkBinOp64(x, "+", y64, Uint128.Add64, (*big.Int).Add)
-			checkBinOp64(x, "-", y64, Uint128.Sub64, (*big.Int).Sub)
-			checkBinOp64(x, "*", y64, Uint128.Mul64, (*big.Int).Mul)
+			checkBinOp64(t, x, "+", y64, Uint128.Add64, (*big.Int).Add)
+			checkBinOp64(t, x, "-", y64, Uint128.Sub64, (*big.Int).Sub)
+			checkBinOp64(t, x, "*", y64, Uint128.Mul64, (*big.Int).Mul)
 			if y64 != 0 {
 				mod64 := func(x Uint128, y uint64) Uint128 {
 					return From64(x.Mod64(y)) // helper to fix signature
 				}
-				checkBinOp64(x, "/", y64, Uint128.Div64, (*big.Int).Div)
-				checkBinOp64(x, "%", y64, mod64, (*big.Int).Mod)
+				checkBinOp64(t, x, "/", y64, Uint128.Div64, (*big.Int).Div)
+				checkBinOp64(t, x, "%", y64, mod64, (*big.Int).Mod)
 			}
-			checkBinOp64(x, "&^", y64, Uint128.AndNot64, (*big.Int).AndNot)
-			checkBinOp64(x, "&", y64, Uint128.And64, (*big.Int).And)
-			checkBinOp64(x, "|", y64, Uint128.Or64, (*big.Int).Or)
-			checkBinOp64(x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
+			checkBinOp64(t, x, "&^", y64, Uint128.AndNot64, (*big.Int).AndNot)
+			checkBinOp64(t, x, "&", y64, Uint128.And64, (*big.Int).And)
+			checkBinOp64(t, x, "|", y64, Uint128.Or64, (*big.Int).Or)
+			checkBinOp64(t, x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(From64(y64).Big()), x.Cmp64(y64); expected != got {
 				t.Fatalf("mismatch: cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
 			}
 
 			// shift op
 			z := uint(y.Lo & 0xFF)
-			checkShiftOp(x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
-			checkShiftOp(x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
+			checkShiftOp(t, x, "<<", z, Uint128.Lsh, (*big.Int).Lsh)
+			checkShiftOp(t, x, ">>", z, Uint128.Rsh, (*big.Int).Rsh)
 		}
 
 		// unary Cmp
