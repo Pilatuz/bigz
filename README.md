@@ -1,12 +1,21 @@
 uint128
 -------
 
-[![GoDoc](https://godoc.org/github.com/lukechampine/uint128?status.svg)](https://godoc.org/github.com/lukechampine/uint128)
-[![Go Report Card](http://goreportcard.com/badge/github.com/lukechampine/uint128)](https://goreportcard.com/report/github.com/lukechampine/uint128)
+[![GoDoc](https://godoc.org/github.com/Pilatuz/uint128?status.svg)](https://godoc.org/github.com/Pilatuz/uint128)
+[![Go Report Card](http://goreportcard.com/badge/github.com/Pilatuz/uint128)](https://goreportcard.com/report/github.com/Pilatuz/uint128)
 
 ```
-go get lukechampine.com/uint128
+go get github.com/Pilatuz/uint128
 ```
+
+The key differences from [original package](https://github.com/lukechampine/uint128):
+
+- No panics! All methods have wrap-around semantic!
+- `Zero` and `Max` are functions to prevent modification of global variables.
+- `New` was removed to encourage explicit `Uint128{Lo: ..., Hi: ...}` initialization.
+- Trivial (via corresponding `big.Int.Format`) implementation of `Format` method to support for example hex output as `fmt.Sprintf("%X", u)`.
+- Store/Load methods in little-endian and big-endian byte order.
+- New `Not` and `AndNot` methods.
 
 `uint128` provides a high-performance `Uint128` type that supports standard arithmetic
 operations. Unlike `math/big`, operations on `Uint128` values always produce new values
