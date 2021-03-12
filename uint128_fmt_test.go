@@ -10,17 +10,17 @@ func TestUint128String(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		// Zero()
 		if expected, got := "0", Zero().String(); got != expected {
-			t.Errorf(`Zero() should be %q, got %q`, expected, got)
+			t.Errorf("Zero() should be %q, got %q", expected, got)
 		}
 
 		// One()
 		if expected, got := "1", One().String(); got != expected {
-			t.Errorf(`One() should be %q, got %q`, expected, got)
+			t.Errorf("One() should be %q, got %q", expected, got)
 		}
 
 		// Max()
 		if expected, got := "340282366920938463463374607431768211455", Max().String(); got != expected {
-			t.Errorf(`Max() should be %q, got %q`, expected, got)
+			t.Errorf("Max() should be %q, got %q", expected, got)
 		}
 	})
 
@@ -60,17 +60,17 @@ func TestUint128Format(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		// Zero()
 		if expected, got := "0o0", fmt.Sprintf("%#O", Zero()); got != expected {
-			t.Errorf(`Zero() should be %q, got %q`, expected, got)
+			t.Errorf("Zero() should be %q, got %q", expected, got)
 		}
 
 		// One()
 		if expected, got := "0001", fmt.Sprintf("%04b", One()); got != expected {
-			t.Errorf(`One() should be %q, got %q`, expected, got)
+			t.Errorf("One() should be %q, got %q", expected, got)
 		}
 
 		// Max()
 		if expected, got := "ffffffffffffffffffffffffffffffff", fmt.Sprintf("%x", Max()); got != expected {
-			t.Errorf(`Max() should be %q, got %q`, expected, got)
+			t.Errorf("Max() should be %q, got %q", expected, got)
 		}
 	})
 }
