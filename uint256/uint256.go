@@ -456,33 +456,101 @@ func (u Uint256) RotateLeft(k int) Uint256 {
 
 	if n < 64 {
 		if n == 0 {
+			// no shift
 			return u
 		}
 
+		// shift by [1..63]
 		return Uint256{
 			Lo: Uint128{
 				Lo: u.Lo.Lo<<n | u.Hi.Hi>>(64-n),
 				Hi: u.Lo.Hi<<n | u.Lo.Lo>>(64-n),
 			},
 			Hi: Uint128{
-				Lo: u.Lo.Lo<<n | u.Hi.Hi>>(64-n),
+				Lo: u.Hi.Lo<<n | u.Lo.Hi>>(64-n),
+				Hi: u.Hi.Hi<<n | u.Hi.Lo>>(64-n),
+			},
+		}
+	}
+
+	n -= 64
+	if n < 64 {
+		if n == 0 {
+			// shift by 64
+			return Uint256{
+				Lo: Uint128{
+					Lo: u.Hi.Hi,
+					Hi: u.Lo.Lo,
+				},
+				Hi: Uint128{
+					Lo: u.Lo.Hi,
+					Hi: u.Hi.Lo,
+				},
+			}
+		}
+
+		// shift by [65..127]
+		return Uint256{
+			Lo: Uint128{
+				Lo: u.Hi.Hi<<n | u.Hi.Lo>>(64-n),
+				Hi: u.Lo.Lo<<n | u.Hi.Hi>>(64-n),
+			},
+			Hi: Uint128{
+				Lo: u.Lo.Hi<<n | u.Lo.Lo>>(64-n),
 				Hi: u.Hi.Lo<<n | u.Lo.Hi>>(64-n),
 			},
 		}
 	}
 
 	n -= 64
-	if n == 0 {
+	if n < 64 {
+		if n == 0 {
+			// shift by 128
+			return Uint256{
+				Lo: u.Hi,
+				Hi: u.Lo,
+			}
+		}
+
+		// shift by [129..191]
 		return Uint256{
-			Lo: u.Hi,
-			Hi: u.Lo,
+			Lo: Uint128{
+				Lo: u.Hi.Lo<<n | u.Lo.Hi>>(64-n),
+				Hi: u.Hi.Hi<<n | u.Hi.Lo>>(64-n),
+			},
+			Hi: Uint128{
+				Lo: u.Lo.Lo<<n | u.Hi.Hi>>(64-n),
+				Hi: u.Lo.Hi<<n | u.Lo.Lo>>(64-n),
+			},
 		}
 	}
 
-	return Zero() /*Uint256{
-		Lo: u.Lo>>(64-n) | u.Hi<<n,
-		Hi: u.Hi>>(64-n) | u.Lo<<n,
-	}*/
+	n -= 64
+	if n == 0 {
+		// shift by 192
+		return Uint256{
+			Lo: Uint128{
+				Lo: u.Lo.Hi,
+				Hi: u.Hi.Lo,
+			},
+			Hi: Uint128{
+				Lo: u.Hi.Hi,
+				Hi: u.Lo.Lo,
+			},
+		}
+	}
+
+	// shift by [193..255]
+	return Uint256{
+		Lo: Uint128{
+			Lo: u.Lo.Hi<<n | u.Lo.Lo>>(64-n),
+			Hi: u.Hi.Lo<<n | u.Lo.Hi>>(64-n),
+		},
+		Hi: Uint128{
+			Lo: u.Hi.Hi<<n | u.Hi.Lo>>(64-n),
+			Hi: u.Lo.Lo<<n | u.Hi.Hi>>(64-n),
+		},
+	}
 }
 
 // RotateRight returns the value of u rotated left by (k mod 256) bits.

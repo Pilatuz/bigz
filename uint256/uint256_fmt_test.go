@@ -30,7 +30,7 @@ func TestUint128String(t *testing.T) {
 		go generate256s(1000, values)
 		for x := range values {
 			if expected, got := x.Big().String(), x.String(); got != expected {
-				t.Errorf("String() mismatch:\n\t(-) expected %q\n\t(+)   actual %q", expected, got)
+				t.Fatalf("String() mismatch:\n\t(-) expected %q\n\t(+)   actual %q", expected, got)
 			}
 		}
 	})
@@ -87,18 +87,18 @@ func TestStoreLoad(t *testing.T) {
 			// little-endian
 			StoreLittleEndian(buf, x)
 			if got := LoadLittleEndian(buf); got != x {
-				t.Errorf("LoadLittleEndian is not the inverse of StoreLittleEndian for %#x, got %#x", x, got)
+				t.Fatalf("LoadLittleEndian is not the inverse of StoreLittleEndian for %#x, got %#x", x, got)
 			}
 
 			// big-endian
 			StoreBigEndian(buf, x)
 			if got := LoadBigEndian(buf); got != x {
-				t.Errorf("LoadBigEndian is not the inverse of StoreBigEndian for %#x, got %#x", x, got)
+				t.Fatalf("LoadBigEndian is not the inverse of StoreBigEndian for %#x, got %#x", x, got)
 			}
 
 			// reverse bytes
 			if got := LoadLittleEndian(buf); got != x.ReverseBytes() {
-				t.Errorf("LoadLittleEndian is not the inverse of StoreBigEndian.ReverseBytes for %#x, got %#x", x, got)
+				t.Fatalf("LoadLittleEndian is not the inverse of StoreBigEndian.ReverseBytes for %#x, got %#x", x, got)
 			}
 		}
 	})

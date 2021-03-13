@@ -89,38 +89,38 @@ func TestUint128Helpers(t *testing.T) {
 }
 
 // TestUint128Bits unit tests for bit counting helpers.
-/*func TestUint128Bits(t *testing.T) {
+func TestUint128Bits(t *testing.T) {
 	t.Run("rand", func(t *testing.T) {
 		values := make(chan Uint256)
-		go generate128s(1000, values)
+		go generate256s(1000, values)
 		for x := range values {
-			d := newDummy128(x.Big())
-			k := int(x.Lo & 0xFF)
+			d := newDummy256(x.Big())
+			k := int(x.Lo.Lo & 0xFF)
 
 			if expected, got := d.LeadingZeros(), x.LeadingZeros(); got != expected {
-				t.Errorf("mismatch: %#x LeadingZeros should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x LeadingZeros should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.TrailingZeros(), x.TrailingZeros(); got != expected {
-				t.Errorf("mismatch: %#x TrailingZeros should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x TrailingZeros should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.OnesCount(), x.OnesCount(); got != expected {
-				t.Errorf("mismatch: %#x OnesCount should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x OnesCount should equal %v, got %v", x, expected, got)
 			}
-			if expected, got := d.RotateRight(k), newDummy128(x.RotateRight(k).Big()); !expected.Equals(got) {
-				t.Errorf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
+			if expected, got := d.RotateRight(k), newDummy256(x.RotateRight(k).Big()); !expected.Equals(got) {
+				t.Fatalf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
 			}
-			if expected, got := d.RotateLeft(k), newDummy128(x.RotateLeft(k).Big()); !expected.Equals(got) {
-				t.Errorf("mismatch: %#x RotateLeft should equal %v, got %v", x, expected, got)
+			if expected, got := d.RotateLeft(k), newDummy256(x.RotateLeft(k).Big()); !expected.Equals(got) {
+				t.Fatalf("mismatch: %#x RotateLeft should equal %v, got %v", x, expected, got)
 			}
-			if expected, got := d.Reverse(), newDummy128(x.Reverse().Big()); !expected.Equals(got) {
-				t.Errorf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
+			if expected, got := d.Reverse(), newDummy256(x.Reverse().Big()); !expected.Equals(got) {
+				t.Fatalf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := x.Big().BitLen(), x.BitLen(); expected != got {
-				t.Errorf("mismatch: %#x BitLen should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x BitLen should equal %v, got %v", x, expected, got)
 			}
 		}
 	})
-}*/
+}
 
 // big.Int 2^256 wraparound semantics
 var (
@@ -304,7 +304,7 @@ func (u dummy256) RotateRight(k int) dummy256 {
 func (u dummy256) Reverse() dummy256 {
 	var out dummy256
 	for i := range u {
-		out[256-i] = u[i]
+		out[255-i] = u[i]
 	}
 	return out
 }

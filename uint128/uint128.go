@@ -367,9 +367,11 @@ func (u Uint128) RotateLeft(k int) Uint128 {
 
 	if n < 64 {
 		if n == 0 {
+			// no shift
 			return u
 		}
 
+		// shift by [1..63]
 		return Uint128{
 			Lo: u.Lo<<n | u.Hi>>(64-n),
 			Hi: u.Hi<<n | u.Lo>>(64-n),
@@ -378,12 +380,14 @@ func (u Uint128) RotateLeft(k int) Uint128 {
 
 	n -= 64
 	if n == 0 {
+		// shift by 64
 		return Uint128{
 			Lo: u.Hi,
 			Hi: u.Lo,
 		}
 	}
 
+	// shift by [65..127]
 	return Uint128{
 		Lo: u.Lo>>(64-n) | u.Hi<<n,
 		Hi: u.Hi>>(64-n) | u.Lo<<n,
