@@ -70,8 +70,9 @@ func FromBigX(i *big.Int) (Uint128, bool) {
 	// Note, actually result of big.Int.Uint64 is undefined
 	// if stored value is greater than 2^64
 	// but we assume that it just gets low 64 bits.
+	t := new(big.Int)
 	lo := i.Uint64()
-	hi := new(big.Int).Rsh(i, 64).Uint64()
+	hi := t.Rsh(i, 64).Uint64()
 	return Uint128{
 		Lo: lo,
 		Hi: hi,

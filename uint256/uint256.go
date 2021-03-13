@@ -74,11 +74,14 @@ func FromBigX(i *big.Int) (Uint256, bool) {
 		return Max(), false // value overflows 256-bit!
 	}
 
-	lo := i
-	hi := new(big.Int).Rsh(i, 128)
+	t := new(big.Int)
+	lolo := i.Uint64()
+	lohi := t.Rsh(i, 64).Uint64()
+	hilo := t.Rsh(i, 128).Uint64()
+	hihi := t.Rsh(i, 192).Uint64()
 	return Uint256{
-		Lo: uint128.FromBig(lo),
-		Hi: uint128.FromBig(hi),
+		Lo: Uint128{Lo: lolo, Hi: lohi},
+		Hi: Uint128{Lo: hilo, Hi: hihi},
 	}, true
 }
 
