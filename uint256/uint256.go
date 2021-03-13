@@ -384,15 +384,35 @@ func (u Uint256) QuoRem64(v uint64) (Uint256, uint64) {
 func (u Uint256) Lsh(n uint) Uint256 {
 	if n > 128 {
 		return Uint256{
-			// Lo: 0,
+			// Lo: Uint128{Lo: 0, Hi: 0},
 			Hi: u.Lo.Lsh(n - 128),
 		}
 	}
 
-	return Zero() /*Uint256{
-		Lo: u.Lo << n,
-		Hi: u.Hi<<n | u.Lo>>(64-n),
-	}*/
+	if n > 64 {
+		n -= 64
+		return Uint256{
+			Lo: Uint128{
+				// Lo: 0,
+				Hi: u.Lo.Lo << n,
+			},
+			Hi: Uint128{
+				Lo: u.Lo.Hi<<n | u.Lo.Lo>>(64-n),
+				Hi: u.Hi.Lo<<n | u.Lo.Hi>>(64-n),
+			},
+		}
+	}
+
+	return Uint256{
+		Lo: Uint128{
+			Lo: u.Lo.Lo << n,
+			Hi: u.Lo.Hi<<n | u.Lo.Lo>>(64-n),
+		},
+		Hi: Uint128{
+			Lo: u.Hi.Lo<<n | u.Lo.Hi>>(64-n),
+			Hi: u.Hi.Hi<<n | u.Hi.Lo>>(64-n),
+		},
+	}
 }
 
 // Rsh returns right shift (u>>n).
@@ -400,14 +420,34 @@ func (u Uint256) Rsh(n uint) Uint256 {
 	if n > 128 {
 		return Uint256{
 			Lo: u.Hi.Rsh(n - 128),
-			// Hi: 0,
+			// Hi: Uint128{Lo: 0, Hi: 0},
 		}
 	}
 
-	return Zero() /*Uint256{
-		Lo: u.Lo>>n | u.Hi<<(64-n),
-		Hi: u.Hi >> n,
-	}*/
+	if n > 64 {
+		n -= 64
+		return Uint256{
+			Lo: Uint128{
+				Lo: u.Lo.Hi>>n | u.Hi.Lo<<(64-n),
+				Hi: u.Hi.Lo>>n | u.Hi.Hi<<(64-n),
+			},
+			Hi: Uint128{
+				Lo: u.Hi.Hi >> n,
+				// Hi: 0,
+			},
+		}
+	}
+
+	return Uint256{
+		Lo: Uint128{
+			Lo: u.Lo.Lo>>n | u.Lo.Hi<<(64-n),
+			Hi: u.Lo.Hi>>n | u.Hi.Lo<<(64-n),
+		},
+		Hi: Uint128{
+			Lo: u.Hi.Lo>>n | u.Hi.Hi<<(64-n),
+			Hi: u.Hi.Hi >> n,
+		},
+	}
 }
 
 // RotateLeft returns the value of u rotated left by (k mod 256) bits.
