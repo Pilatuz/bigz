@@ -13,10 +13,10 @@ func rand128() Uint128 {
 	rand.Read(buf)
 	u := LoadUint128LE(buf)
 	if buf[16]&0x07 == 0 {
-		u.Lo = 0 // reset lower half
+		u.Lo = 0 // reset low half
 	}
 	if buf[16]&0x70 == 0 {
-		u.Hi = 0 // reset higher half
+		u.Hi = 0 // reset high half
 	}
 	return u
 }

@@ -31,16 +31,16 @@ func Max() Uint128 {
 // Uint128 is an unsigned 128-bit number.
 // All methods are immutable, works just like standard uint64.
 type Uint128 struct {
-	Lo uint64 // lower 64-bit half
-	Hi uint64 // higher 64-bit half
+	Lo uint64 // low 64-bit half
+	Hi uint64 // high 64-bit half
 }
 
 // Note, there in no New(lo, hi) just not to confuse
-// which half goes first: lower or higher.
+// which half goes first: low or high.
 // Use structure initialization Uint128{Lo: ..., Hi: ...} instead.
 
 // From64 converts 64-bit value v to a Uint128 value.
-// Higher 64-bit half will be zero.
+// High 64-bit half will be zero.
 func From64(v uint64) Uint128 {
 	return Uint128{Lo: v}
 }
@@ -69,7 +69,7 @@ func FromBigX(i *big.Int) (Uint128, bool) {
 
 	// Note, actually result of big.Int.Uint64 is undefined
 	// if stored value is greater than 2^64
-	// but we assume that it just gets lower 64 bits.
+	// but we assume that it just gets low 64 bits.
 	lo := i.Uint64()
 	hi := new(big.Int).Rsh(i, 64).Uint64()
 	return Uint128{
