@@ -1,3 +1,3 @@
-module github.com/Pilatuz/uint128
+module github.com/Pilatuz/bigx
 
 go 1.15

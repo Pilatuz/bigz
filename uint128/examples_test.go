@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"net"
 
-	"github.com/Pilatuz/uint128"
+	"github.com/Pilatuz/bigx/uint128"
 )
 
 // ExampleFromBig is an example for FromBig.
@@ -52,11 +52,11 @@ func ExampleUint128_Format() {
 	// 0xffffffffffffffffffffffffffffffff
 }
 
-// ExampleUint128_load is an example for LoadUint128BE and LoadUint128LE.
+// ExampleUint128_load is an example for LoadBigEndian and LoadLittleEndian.
 func ExampleUint128_load() {
 	ip := net.ParseIP("cafe::dead:beaf")
-	fmt.Printf("%032x\n", uint128.LoadUint128BE(ip.To16()))
-	fmt.Printf("%032x\n", uint128.LoadUint128LE(ip.To16()))
+	fmt.Printf("%032x\n", uint128.LoadBigEndian(ip.To16()))
+	fmt.Printf("%032x\n", uint128.LoadLittleEndian(ip.To16()))
 	// Output:
 	// cafe00000000000000000000deadbeaf
 	// afbeadde00000000000000000000feca

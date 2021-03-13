@@ -85,20 +85,20 @@ func TestStoreLoad(t *testing.T) {
 			buf := make([]byte, 16)
 
 			// little-endian
-			StoreUint128LE(buf, x)
-			if got := LoadUint128LE(buf); got != x {
-				t.Errorf("LoadUint128LE is not the inverse of StoreUint128LE for %#x, got %#x", x, got)
+			StoreLittleEndian(buf, x)
+			if got := LoadLittleEndian(buf); got != x {
+				t.Errorf("LoadLittleEndian is not the inverse of StoreLittleEndian for %#x, got %#x", x, got)
 			}
 
 			// big-endian
-			StoreUint128BE(buf, x)
-			if got := LoadUint128BE(buf); got != x {
-				t.Errorf("LoadUint128BE is not the inverse of StoreUint128BE for %#x, got %#x", x, got)
+			StoreBigEndian(buf, x)
+			if got := LoadBigEndian(buf); got != x {
+				t.Errorf("LoadBigEndian is not the inverse of StoreBigEndian for %#x, got %#x", x, got)
 			}
 
 			// reverse bytes
-			if got := LoadUint128LE(buf); got != x.ReverseBytes() {
-				t.Errorf("LoadUint128LE is not the inverse of StoreUint128BE.ReverseBytes for %#x, got %#x", x, got)
+			if got := LoadLittleEndian(buf); got != x.ReverseBytes() {
+				t.Errorf("LoadLittleEndian is not the inverse of StoreBigEndian.ReverseBytes for %#x, got %#x", x, got)
 			}
 		}
 	})

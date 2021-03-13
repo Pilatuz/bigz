@@ -11,7 +11,7 @@ import (
 func rand128() Uint128 {
 	buf := make([]byte, 16+1) // one extra random byte!
 	rand.Read(buf)
-	u := LoadUint128LE(buf)
+	u := LoadLittleEndian(buf)
 	if buf[16]&0x07 == 0 {
 		u.Lo = 0 // reset low half
 	}

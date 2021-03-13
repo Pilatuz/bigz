@@ -1,6 +1,6 @@
-# uint128 [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][reportcard-img]][reportcard]
+# bigx [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][reportcard-img]][reportcard]
 
-`uint128` provides a high-performance `Uint128` type that supports standard arithmetic
+`bigx/uint128` provides a high-performance `Uint128` type that supports standard arithmetic
 operations. Unlike `math/big`, operations on `Uint128` always produce new values
 instead of modifying a pointer receiver. A `Uint128` value is therefore immutable, just
 like `uint64` and friends.
@@ -11,27 +11,27 @@ Released under the [MIT License](LICENSE).
 ## Installation
 
 ```shell
-go get github.com/Pilatuz/uint128
+go get github.com/Pilatuz/bigx
 ```
 
-The name `uint128.Uint128` stutters, so it recommended either using a "import alias":
+The name `uint128.Uint128` stutters, so it is recommended either using a "facade" package:
 
 ```go
 import (
-    bigx "github.com/Pilatuz/uint128"
+    "github.com/Pilatuz/bigx"
 )
 
-// use it as bigx.Uint128
+// then use bigx.Uint128 type
 ```
 
 or type aliasing `uint128.Uint128` to give it a project-specific name:
 
 ```go
 import (
-    "github.com/Pilatuz/uint128"
+    "github.com/Pilatuz/bigx/uint128"
 )
 
-type Uint128 = uint128.Uint128
+type U128 = uint128.Uint128
 ```
 
 
@@ -43,7 +43,7 @@ The key differences from [original package](https://github.com/lukechampine/uint
 - `Zero` and `Max` are functions to prevent modification of global variables.
 - `New` was removed to encourage explicit `Uint128{Lo: ..., Hi: ...}` initialization.
 - Trivial (via `big.Int`) implementation of fmt.Formatter interface to support for example hex output as `fmt.Sprintf("%X", u)`.
-- Trivial (via `big.Int`) implementation of TextMarshaller and TextUnmarshaler interfaces to suppoer JSON encoding.
+- Trivial (via `big.Int`) implementation of TextMarshaller and TextUnmarshaler interfaces to support JSON encoding.
 - Store/Load methods support little-endian and big-endian byte order.
 - New `Not` and `AndNot` methods.
 
@@ -102,23 +102,23 @@ The following bit operations are supported:
 
 The following miscellaneous operations are supported:
 
-| 128-bit            | Standard equivalent                                                                  |
-|--------------------|--------------------------------------------------------------------------------------|
-| `u.String`         | [`big.Int.String`](https://golang.org/pkg/math/big/#Int.String)                      |
-| `u.Format`         | [`big.Int.Format`](https://golang.org/pkg/math/big/#Int.Format)                      |
-| `u.StoreUint128LE` | [`binary.LittleEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder) |
-| `u.LoadUint128LE`  | [`binary.LittleEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
-| `u.StoreUint128BE` | [`binary.BigEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
-| `u.LoadUint128BE`  | [`binary.BigEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)       |
+| 128-bit               | Standard equivalent                                                                  |
+|-----------------------|--------------------------------------------------------------------------------------|
+| `u.String`            | [`big.Int.String`](https://golang.org/pkg/math/big/#Int.String)                      |
+| `u.Format`            | [`big.Int.Format`](https://golang.org/pkg/math/big/#Int.Format)                      |
+| `u.StoreLittleEndian` | [`binary.LittleEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder) |
+| `u.LoadLittleEndian`  | [`binary.LittleEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
+| `u.StoreBigEndian`    | [`binary.BigEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
+| `u.LoadBigEndian`     | [`binary.BigEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)       |
 
 See the [documentation][doc] for a complete API specification.
 
 
-[doc-img]: https://godoc.org/github.com/Pilatuz/uint128?status.svg
-[doc]: https://godoc.org/github.com/Pilatuz/uint128
-[ci-img]: https://travis-ci.com/Pilatuz/uint128.svg?branch=master
-[ci]: https://travis-ci.com/Pilatuz/uint128
-[cov-img]: https://codecov.io/gh/Pilatuz/uint128/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/Pilatuz/uint128
-[reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/uint128
-[reportcard]: https://goreportcard.com/report/github.com/Pilatuz/uint128
+[doc-img]: https://godoc.org/github.com/Pilatuz/bigx?status.svg
+[doc]: https://godoc.org/github.com/Pilatuz/bigx
+[ci-img]: https://travis-ci.com/Pilatuz/bigx.svg?branch=master
+[ci]: https://travis-ci.com/Pilatuz/bigx
+[cov-img]: https://codecov.io/gh/Pilatuz/bigx/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/Pilatuz/bigx
+[reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/bigx
+[reportcard]: https://goreportcard.com/report/github.com/Pilatuz/bigx

@@ -56,32 +56,32 @@ func (u *Uint128) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// StoreUint128LE stores 128-bit value in byte slice in little-endian order.
+// StoreLittleEndian stores 128-bit value in byte slice in little-endian byte order.
 // It panics if byte slice length is less than 16.
-func StoreUint128LE(b []byte, u Uint128) {
+func StoreLittleEndian(b []byte, u Uint128) {
 	binary.LittleEndian.PutUint64(b[:8], u.Lo)
 	binary.LittleEndian.PutUint64(b[8:], u.Hi)
 }
 
-// StoreUint128BE stores 128-bit value in byte slice in big-endian order.
+// StoreBigEndian stores 128-bit value in byte slice in big-endian byte order.
 // It panics if byte slice length is less than 16.
-func StoreUint128BE(b []byte, u Uint128) {
+func StoreBigEndian(b []byte, u Uint128) {
 	binary.BigEndian.PutUint64(b[:8], u.Hi)
 	binary.BigEndian.PutUint64(b[8:], u.Lo)
 }
 
-// LoadUint128LE loads 128-bit value from byte slice in little-endian order.
+// LoadLittleEndian loads 128-bit value from byte slice in little-endian byte order.
 // It panics if byte slice length is less than 16.
-func LoadUint128LE(b []byte) Uint128 {
+func LoadLittleEndian(b []byte) Uint128 {
 	return Uint128{
 		Lo: binary.LittleEndian.Uint64(b[:8]),
 		Hi: binary.LittleEndian.Uint64(b[8:]),
 	}
 }
 
-// LoadUint128BE loads 128-bit value from byte slice in big-endian order.
+// LoadBigEndian loads 128-bit value from byte slice in big-endian byte order.
 // It panics if byte slice length is less than 16.
-func LoadUint128BE(b []byte) Uint128 {
+func LoadBigEndian(b []byte) Uint128 {
 	return Uint128{
 		Lo: binary.BigEndian.Uint64(b[8:]),
 		Hi: binary.BigEndian.Uint64(b[:8]),
