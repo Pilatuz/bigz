@@ -86,6 +86,20 @@ func BenchmarkArithmetic(b *testing.B) {
 		}
 	})
 
+	b.Run("RotateLeft_128", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			res := xx[i%K].RotateLeft(int(zz[i%K]))
+			DummyOutput += int(res.Lo & 1)
+		}
+	})
+
+	b.Run("RotateRight_128", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			res := xx[i%K].RotateRight(int(zz[i%K]))
+			DummyOutput += int(res.Lo & 1)
+		}
+	})
+
 	b.Run("Cmp_128_128", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			res := xx[i%K].Cmp(yy[i%K])

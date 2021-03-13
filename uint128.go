@@ -362,9 +362,31 @@ func (u Uint128) Rsh(n uint) Uint128 {
 
 // RotateLeft returns the value of u rotated left by (k mod 128) bits.
 func (u Uint128) RotateLeft(k int) Uint128 {
-	const n = 128
-	s := uint(k) & (n - 1)
-	return u.Lsh(s).Or(u.Rsh(n - s)) // TODO: consider to optimize this
+	n := uint(k) & 127
+
+	if n < 64 {
+		if n == 0 {
+			return u
+		}
+
+		return Uint128{
+			Lo: u.Lo<<n | u.Hi>>(64-n),
+			Hi: u.Hi<<n | u.Lo>>(64-n),
+		}
+	}
+
+	n -= 64
+	if n == 0 {
+		return Uint128{
+			Lo: u.Hi,
+			Hi: u.Lo,
+		}
+	}
+
+	return Uint128{
+		Lo: u.Lo>>(64-n) | u.Hi<<n,
+		Hi: u.Hi>>(64-n) | u.Lo<<n,
+	}
 }
 
 // RotateRight returns the value of u rotated left by (k mod 128) bits.

@@ -221,7 +221,7 @@ func TestArithmetic(t *testing.T) {
 }
 
 // dummy raw 128 bits
-type dummy128 [128]bool
+type dummy128 [128]uint
 
 func newDummy128(b *big.Int) dummy128 {
 	n := b.BitLen()
@@ -231,7 +231,7 @@ func newDummy128(b *big.Int) dummy128 {
 
 	var out dummy128
 	for i := 0; i < n; i++ {
-		out[i] = (b.Bit(i) != 0)
+		out[i] = b.Bit(i)
 	}
 	return out
 }
@@ -252,7 +252,7 @@ func (u dummy128) LeadingZeros() int {
 func (u dummy128) TrailingZeros() int {
 	var out int
 	for i := range u {
-		if u[i] {
+		if u[i] != 0 {
 			break
 		}
 		out++
@@ -263,7 +263,7 @@ func (u dummy128) TrailingZeros() int {
 func (u dummy128) OnesCount() int {
 	var out int
 	for i := range u {
-		if u[i] {
+		if u[i] != 0 {
 			out++
 		}
 	}
