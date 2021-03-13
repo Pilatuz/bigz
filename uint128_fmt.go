@@ -3,6 +3,7 @@ package uint128
 import (
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"strconv"
 )
 
@@ -32,9 +33,27 @@ func (u Uint128) String() string {
 
 // Format does custom formatting of 128-bit value.
 func (u Uint128) Format(s fmt.State, ch rune) {
-	// do it in the simplest
-	// but unefficient way for now
-	u.Big().Format(s, ch)
+	u.Big().Format(s, ch) // via big.Int, unefficient! consider to optimize
+}
+
+// MarshalText implements the encoding.TextMarshaler interface.
+func (u Uint128) MarshalText() (text []byte, err error) {
+	return u.Big().MarshalText() // via big.Int, unefficient! consider to optimize
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+func (u *Uint128) UnmarshalText(text []byte) error {
+	// via big.Int, unefficient! consider to optimize
+	i := new(big.Int)
+	if err := i.UnmarshalText(text); err != nil {
+		return err
+	}
+	v, ok := FromBigX(i)
+	if !ok {
+		return fmt.Errorf("%q overflows 128-bit integer", text)
+	}
+	*u = v
+	return nil
 }
 
 // StoreUint128LE stores 128-bit value in byte slice in little-endian order.

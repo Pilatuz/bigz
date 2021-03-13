@@ -1,6 +1,7 @@
 package uint128_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"net"
@@ -51,12 +52,24 @@ func ExampleUint128_Format() {
 	// 0xffffffffffffffffffffffffffffffff
 }
 
-// ExampleLoadUint128BE is an example for LoadUint128BE.
-func ExampleLoadUint128BE() {
+// ExampleUint128_load is an example for LoadUint128BE and LoadUint128LE.
+func ExampleUint128_load() {
 	ip := net.ParseIP("cafe::dead:beaf")
 	fmt.Printf("%032x\n", uint128.LoadUint128BE(ip.To16()))
 	fmt.Printf("%032x\n", uint128.LoadUint128LE(ip.To16()))
 	// Output:
 	// cafe00000000000000000000deadbeaf
 	// afbeadde00000000000000000000feca
+}
+
+// ExampleUint128_json is an example for JSON marshaling.
+func ExampleUint128_json() {
+	foo := map[string]interface{}{
+		"bar": uint128.From64(12345),
+	}
+
+	buf, _ := json.Marshal(foo)
+	fmt.Printf("%s", buf)
+	// Output:
+	// {"bar":"12345"}
 }

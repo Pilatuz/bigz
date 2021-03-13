@@ -42,8 +42,9 @@ The key differences from [original package](https://github.com/lukechampine/uint
 - No panics! All methods have wrap-around semantic!
 - `Zero` and `Max` are functions to prevent modification of global variables.
 - `New` was removed to encourage explicit `Uint128{Lo: ..., Hi: ...}` initialization.
-- Trivial (via corresponding `big.Int.Format`) implementation of `Format` method to support for example hex output as `fmt.Sprintf("%X", u)`.
-- Store/Load methods in little-endian and big-endian byte order.
+- Trivial (via `big.Int`) implementation of fmt.Formatter interface to support for example hex output as `fmt.Sprintf("%X", u)`.
+- Trivial (via `big.Int`) implementation of TextMarshaller and TextUnmarshaler interfaces to suppoer JSON encoding.
+- Store/Load methods support little-endian and big-endian byte order.
 - New `Not` and `AndNot` methods.
 
 

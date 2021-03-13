@@ -1,6 +1,7 @@
 package uint128
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -98,6 +99,50 @@ func TestStoreLoad(t *testing.T) {
 			// reverse bytes
 			if got := LoadUint128LE(buf); got != x.ReverseBytes() {
 				t.Errorf("LoadUint128LE is not the inverse of StoreUint128BE.ReverseBytes for %#x, got %#x", x, got)
+			}
+		}
+	})
+}
+
+// TestJSON unit tests for marshaling functions
+func TestJSON(t *testing.T) {
+	type Foo struct {
+		Bar Uint128 `json:"bar"`
+	}
+
+	t.Run("bad", func(t *testing.T) {
+		var tmp Foo
+
+		// expected non-empty string
+		err := json.Unmarshal([]byte(`{"bar":""}`), &tmp)
+		if err == nil {
+			t.Fatalf("should fail on BAD JSON")
+		}
+
+		// expected positive integer in range [0, 2^128)
+		err = json.Unmarshal([]byte(`{"bar":"-1"}`), &tmp)
+		if err == nil {
+			t.Fatalf("should fail on BAD JSON")
+		}
+	})
+
+	t.Run("rand", func(t *testing.T) {
+		values := make(chan Uint128)
+		go generate128s(1000, values)
+		for x := range values {
+			buf, err := json.Marshal(Foo{Bar: x})
+			if err != nil {
+				t.Fatalf("failed to marshal to JSON: %v", err)
+			}
+
+			var tmp Foo
+			err = json.Unmarshal(buf, &tmp)
+			if err != nil {
+				t.Fatalf("failed to unmarshal JSON: %v", err)
+			}
+
+			if got := tmp.Bar; !got.Equals(x) {
+				t.Fatalf("%#x does not equal itself after JSON decoding, got: %#x", x, got)
 			}
 		}
 	})
