@@ -54,8 +54,8 @@ The 128-bit integer can be initialized in the following ways:
 
 | Method                             | Description                                       |
 |------------------------------------|---------------------------------------------------|
-| `u := Uint128{Lo: lo64, Hi: hi64}` | Set both low and high 64-bit halfs.               |
-| `u := From64(lo64)`                | Set only low 64-bit half.                         |
+| `u := Uint128{Lo: lo64, Hi: hi64}` | Set both lower and upper 64-bit halfs.            |
+| `u := From64(lo64)`                | Set only lower 64-bit half.                       |
 | `u := Zero()`                      | The same as `From64(0)`.                          |
 | `u := One()`                       | The same as `From64(1)`.                          |
 | `u := Max()`                       | The largest possible 128-bit value (`2^128 - 1`). |

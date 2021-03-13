@@ -13,10 +13,10 @@ func rand128() Uint128 {
 	rand.Read(buf)
 	u := LoadLittleEndian(buf)
 	if buf[16]&0x07 == 0 {
-		u.Lo = 0 // reset low half
+		u.Lo = 0 // reset lower half
 	}
 	if buf[16]&0x70 == 0 {
-		u.Hi = 0 // reset high half
+		u.Hi = 0 // reset upper half
 	}
 	return u
 }
@@ -152,6 +152,25 @@ func checkShiftOp(t *testing.T, x Uint128, op string, n uint, fn ShiftOp, fnb Bi
 	expected := mod128(fnb(new(big.Int), x.Big(), n))
 	if got := fn(x, n); expected.Cmp(got.Big()) != 0 {
 		t.Fatalf("mismatch: (%#x %v %v) should equal %#x, got %#x", x, op, n, expected, got)
+	}
+}
+
+// TestMul unit tests for full 128-bit multiplication.
+func TestMul(t *testing.T) {
+	xvalues := make(chan Uint128)
+	go generate128s(200, xvalues)
+	for x := range xvalues {
+		yvalues := make(chan Uint128)
+		go generate128s(200, yvalues)
+		for y := range yvalues {
+			hi, lo := Mul(x, y)
+			expected := new(big.Int).Mul(x.Big(), y.Big())
+			got := new(big.Int).Lsh(hi.Big(), 128)
+			got.Or(got, lo.Big())
+			if expected.Cmp(got) != 0 {
+				t.Fatalf("%x * %x != %x, got %x", x, y, expected, got)
+			}
+		}
 	}
 }
 

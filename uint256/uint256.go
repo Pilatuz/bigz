@@ -42,12 +42,12 @@ type Uint128 = uint128.Uint128
 // Uint256 is an unsigned 256-bit number.
 // All methods are immutable, works just like standard uint64.
 type Uint256 struct {
-	Lo Uint128 // low 128-bit half
-	Hi Uint128 // high 128-bit half
+	Lo Uint128 // lower 128-bit half
+	Hi Uint128 // upper 128-bit half
 }
 
 // From64 converts 64-bit value v to a Uint256 value.
-// High 64-bit half will be zero.
+// Upper 64-bit half will be zero.
 func From64(v uint64) Uint256 {
 	return Uint256{Lo: Uint128{Lo: v}}
 }
@@ -242,14 +242,9 @@ func (u Uint256) Xor64(v uint64) Uint256 {
 // Add returns sum (u+v) of two 256-bit values.
 // Wrap-around semantic is used here: Max().Add(From64(1)) == Zero()
 func (u Uint256) Add(v Uint256) Uint256 {
-	lolo, c0 := bits.Add64(u.Lo.Lo, v.Lo.Lo, 0)
-	lohi, c1 := bits.Add64(u.Lo.Hi, v.Lo.Hi, c0)
-	hilo, c2 := bits.Add64(u.Hi.Lo, v.Hi.Lo, c1)
-	hihi, _ := bits.Add64(u.Hi.Hi, v.Hi.Hi, c2)
-	return Uint256{
-		Lo: Uint128{Lo: lolo, Hi: lohi},
-		Hi: Uint128{Lo: hilo, Hi: hihi},
-	}
+	lo, c0 := uint128.Add(u.Lo, v.Lo, 0)
+	hi, _ := uint128.Add(u.Hi, v.Hi, c0)
+	return Uint256{Lo: lo, Hi: hi}
 }
 
 // Add64 returns sum u+v of 256-bit and 64-bit values.
@@ -268,14 +263,9 @@ func (u Uint256) Add64(v uint64) Uint256 {
 // Sub returns difference (u-v) of two 256-bit values.
 // Wrap-around semantic is used here: Zero().Sub(From64(1)) == Max().
 func (u Uint256) Sub(v Uint256) Uint256 {
-	lolo, b0 := bits.Sub64(u.Lo.Lo, v.Lo.Lo, 0)
-	lohi, b1 := bits.Sub64(u.Lo.Hi, v.Lo.Hi, b0)
-	hilo, b2 := bits.Sub64(u.Hi.Lo, v.Hi.Lo, b1)
-	hihi, _ := bits.Sub64(u.Hi.Hi, v.Hi.Hi, b2)
-	return Uint256{
-		Lo: Uint128{Lo: lolo, Hi: lohi},
-		Hi: Uint128{Lo: hilo, Hi: hihi},
-	}
+	lo, b0 := uint128.Sub(u.Lo, v.Lo, 0)
+	hi, _ := uint128.Sub(u.Hi, v.Hi, b0)
+	return Uint256{Lo: lo, Hi: hi}
 }
 
 // Sub64 returns difference (u-v) of 256-bit and 64-bit values.

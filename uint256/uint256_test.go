@@ -15,16 +15,16 @@ func rand256() Uint256 {
 	rand.Read(buf)
 	u := LoadLittleEndian(buf)
 	if buf[32]&0x03 == 0 {
-		u.Lo.Lo = 0 // reset low half
+		u.Lo.Lo = 0 // reset lower half
 	}
 	if buf[32]&0x0C == 0 {
-		u.Lo.Hi = 0 // reset low half
+		u.Lo.Hi = 0 // reset lower half
 	}
 	if buf[32]&0x30 == 0 {
-		u.Hi.Lo = 0 // reset high half
+		u.Hi.Lo = 0 // reset upper half
 	}
 	if buf[32]&0xC0 == 0 {
-		u.Hi.Hi = 0 // reset high half
+		u.Hi.Hi = 0 // reset upper half
 	}
 	return u
 }

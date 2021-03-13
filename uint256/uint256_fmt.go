@@ -14,7 +14,7 @@ func (u Uint256) String() string {
 		if u.Lo == 0 {
 			return "0" // zero
 		}
-		return strconv.FormatUint(u.Lo, 10) // low 64-bit
+		return strconv.FormatUint(u.Lo, 10) // lower 64-bit
 	}
 
 	buf := []byte("0000000000000000000000000000000000000000") // log10(2^256) < 40
