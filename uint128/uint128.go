@@ -330,7 +330,7 @@ func (u Uint128) QuoRem(v Uint128) (Uint128, Uint128) {
 		return q, From64(r)
 	}
 
-	// generate a "trial quotient," guaranteed to be
+	// generate a "trial quotient" guaranteed to be
 	// within 1 of the actual quotient, then adjust.
 	n := uint(bits.LeadingZeros64(v.Hi))
 	u1, v1 := u.Rsh(1), v.Lsh(n)

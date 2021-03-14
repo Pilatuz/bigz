@@ -138,6 +138,7 @@ func mod256(i *big.Int) *big.Int {
 
 type (
 	BinOp    func(x, y Uint256) Uint256
+	BinOp128 func(x Uint256, y Uint128) Uint256
 	BinOp64  func(x Uint256, y uint64) Uint256
 	BigBinOp func(z, x, y *big.Int) *big.Int
 
@@ -149,6 +150,13 @@ type (
 func checkBinOp(t *testing.T, x Uint256, op string, y Uint256, fn BinOp, fnb BigBinOp) {
 	t.Helper()
 	expected := mod256(fnb(new(big.Int), x.Big(), y.Big()))
+	if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
+		t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
+	}
+}
+func checkBinOp128(t *testing.T, x Uint256, op string, y Uint128, fn BinOp128, fnb BigBinOp) {
+	t.Helper()
+	expected := mod256(fnb(new(big.Int), x.Big(), From128(y).Big()))
 	if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
 		t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
 	}
@@ -170,6 +178,25 @@ func checkShiftOp(t *testing.T, x Uint256, op string, n uint, fn ShiftOp, fnb Bi
 	}
 }
 
+// TestMul unit tests for full 128-bit multiplication.
+func TestMul(t *testing.T) {
+	xvalues := make(chan Uint256)
+	go generate256s(200, xvalues)
+	for x := range xvalues {
+		yvalues := make(chan Uint256)
+		go generate256s(200, yvalues)
+		for y := range yvalues {
+			hi, lo := Mul(x, y)
+			expected := new(big.Int).Mul(x.Big(), y.Big())
+			got := new(big.Int).Lsh(hi.Big(), 256)
+			got.Or(got, lo.Big())
+			if expected.Cmp(got) != 0 {
+				t.Fatalf("%x * %x != %x, got %x", x, y, expected, got)
+			}
+		}
+	}
+}
+
 // TestArithmetic compare Uint256 arithmetic methods to their math/big equivalents
 func TestArithmetic(t *testing.T) {
 	xvalues := make(chan Uint256)
@@ -178,14 +205,14 @@ func TestArithmetic(t *testing.T) {
 		yvalues := make(chan Uint256)
 		go generate256s(200, yvalues)
 		for y := range yvalues {
-			// 128 op 128
+			// 256 op 256
 			checkBinOp(t, x, "+", y, Uint256.Add, (*big.Int).Add)
 			checkBinOp(t, x, "-", y, Uint256.Sub, (*big.Int).Sub)
-			// checkBinOp(t, x, "*", y, Uint256.Mul, (*big.Int).Mul)
-			// if !y.IsZero() {
-			// 	checkBinOp(t, x, "/", y, Uint256.Div, (*big.Int).Div)
-			// 	checkBinOp(t, x, "%", y, Uint256.Mod, (*big.Int).Mod)
-			// }
+			checkBinOp(t, x, "*", y, Uint256.Mul, (*big.Int).Mul)
+			if !y.IsZero() {
+				checkBinOp(t, x, "/", y, Uint256.Div, (*big.Int).Div)
+				checkBinOp(t, x, "%", y, Uint256.Mod, (*big.Int).Mod)
+			}
 			checkBinOp(t, x, "&^", y, Uint256.AndNot, (*big.Int).AndNot)
 			checkBinOp(t, x, "&", y, Uint256.And, (*big.Int).And)
 			checkBinOp(t, x, "|", y, Uint256.Or, (*big.Int).Or)
@@ -194,18 +221,19 @@ func TestArithmetic(t *testing.T) {
 				t.Fatalf("mismatch: cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
 			}
 
-			// 128 op 64
-			y64 := y.Lo.Lo
-			checkBinOp64(t, x, "+", y64, Uint256.Add64, (*big.Int).Add)
-			checkBinOp64(t, x, "-", y64, Uint256.Sub64, (*big.Int).Sub)
-			// checkBinOp64(t, x, "*", y64, Uint256.Mul64, (*big.Int).Mul)
-			// if y64 != 0 {
-			// 	mod64 := func(x Uint256, y uint64) Uint256 {
-			// 		return From64(x.Mod64(y)) // helper to fix signature
-			// 	}
-			// 	checkBinOp64(t, x, "/", y64, Uint256.Div64, (*big.Int).Div)
-			// 	checkBinOp64(t, x, "%", y64, mod64, (*big.Int).Mod)
-			// }
+			// 256 op 128
+			y128 := y.Lo
+			checkBinOp128(t, x, "+", y128, Uint256.Add128, (*big.Int).Add)
+			checkBinOp128(t, x, "-", y128, Uint256.Sub128, (*big.Int).Sub)
+			checkBinOp128(t, x, "*", y128, Uint256.Mul128, (*big.Int).Mul)
+			if !y128.IsZero() {
+				mod128 := func(x Uint256, y Uint128) Uint256 {
+					return From128(x.Mod128(y)) // helper to fix signature
+				}
+				checkBinOp128(t, x, "/", y128, Uint256.Div128, (*big.Int).Div)
+				checkBinOp128(t, x, "%", y128, mod128, (*big.Int).Mod)
+			}
+			y64 := y128.Lo
 			checkBinOp64(t, x, "&^", y64, Uint256.AndNot64, (*big.Int).AndNot)
 			checkBinOp64(t, x, "&", y64, Uint256.And64, (*big.Int).And)
 			checkBinOp64(t, x, "|", y64, Uint256.Or64, (*big.Int).Or)

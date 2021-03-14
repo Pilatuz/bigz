@@ -3,7 +3,6 @@ package uint256
 import (
 	"math"
 	"math/big"
-	"math/bits"
 
 	"github.com/Pilatuz/bigx/uint128"
 )
@@ -46,10 +45,16 @@ type Uint256 struct {
 	Hi Uint128 // upper 128-bit half
 }
 
+// From128 converts 128-bit value v to a Uint256 value.
+// Upper 128-bit half will be zero.
+func From128(v Uint128) Uint256 {
+	return Uint256{Lo: v}
+}
+
 // From64 converts 64-bit value v to a Uint256 value.
 // Upper 64-bit half will be zero.
 func From64(v uint64) Uint256 {
-	return Uint256{Lo: Uint128{Lo: v}}
+	return From128(uint128.From64(v))
 }
 
 // FromBig converts *big.Int to 256-bit Uint256 value ignoring overflows.
@@ -200,7 +205,7 @@ func (u Uint256) And(v Uint256) Uint256 {
 func (u Uint256) And64(v uint64) Uint256 {
 	return Uint256{
 		Lo: u.Lo.And64(v),
-		Hi: Uint128{0, 0},
+		// Hi: Uint128{0, 0},
 	}
 }
 
@@ -239,66 +244,88 @@ func (u Uint256) Xor64(v uint64) Uint256 {
 ///////////////////////////////////////////////////////////////////////////////
 /// arithmetic operators //////////////////////////////////////////////////////
 
+// Add returns the sum with carry of x, y and carry: sum = x + y + carry.
+// The carry input must be 0 or 1; otherwise the behavior is undefined.
+// The carryOut output is guaranteed to be 0 or 1.
+func Add(x, y Uint256, carry uint64) (sum Uint256, carryOut uint64) {
+	sum.Lo, carryOut = uint128.Add(x.Lo, y.Lo, carry)
+	sum.Hi, carryOut = uint128.Add(x.Hi, y.Hi, carryOut)
+	return
+}
+
 // Add returns sum (u+v) of two 256-bit values.
 // Wrap-around semantic is used here: Max().Add(From64(1)) == Zero()
 func (u Uint256) Add(v Uint256) Uint256 {
-	lo, c0 := uint128.Add(u.Lo, v.Lo, 0)
-	hi, _ := uint128.Add(u.Hi, v.Hi, c0)
-	return Uint256{Lo: lo, Hi: hi}
+	sum, _ := Add(u, v, 0)
+	return sum
 }
 
-// Add64 returns sum u+v of 256-bit and 64-bit values.
-// Wrap-around semantic is used here: Max().Add64(1) == Zero()
-func (u Uint256) Add64(v uint64) Uint256 {
-	lolo, c0 := bits.Add64(u.Lo.Lo, v, 0)
-	lohi, c1 := bits.Add64(u.Lo.Hi, 0, c0)
-	hilo, c2 := bits.Add64(u.Hi.Lo, 0, c1)
-	hihi, _ := bits.Add64(u.Hi.Hi, 0, c2)
-	return Uint256{
-		Lo: Uint128{Lo: lolo, Hi: lohi},
-		Hi: Uint128{Lo: hilo, Hi: hihi},
-	}
+// Add128 returns sum u+v of 256-bit and 128-bit values.
+// Wrap-around semantic is used here: Max().Add128(uint128.One()) == Zero()
+func (u Uint256) Add128(v Uint128) Uint256 {
+	lo, c0 := uint128.Add(u.Lo, v, 0)
+	return Uint256{Lo: lo, Hi: u.Hi.Add64(c0)}
+}
+
+// Sub returns the difference of x, y and borrow: diff = x - y - borrow.
+// The borrow input must be 0 or 1; otherwise the behavior is undefined.
+// The borrowOut output is guaranteed to be 0 or 1.
+func Sub(x, y Uint256, borrow uint64) (diff Uint256, borrowOut uint64) {
+	diff.Lo, borrowOut = uint128.Sub(x.Lo, y.Lo, borrow)
+	diff.Hi, borrowOut = uint128.Sub(x.Hi, y.Hi, borrowOut)
+	return
 }
 
 // Sub returns difference (u-v) of two 256-bit values.
 // Wrap-around semantic is used here: Zero().Sub(From64(1)) == Max().
 func (u Uint256) Sub(v Uint256) Uint256 {
-	lo, b0 := uint128.Sub(u.Lo, v.Lo, 0)
-	hi, _ := uint128.Sub(u.Hi, v.Hi, b0)
-	return Uint256{Lo: lo, Hi: hi}
+	diff, _ := Sub(u, v, 0)
+	return diff
 }
 
-// Sub64 returns difference (u-v) of 256-bit and 64-bit values.
-// Wrap-around semantic is used here: Zero().Sub64(1) == Max().
-func (u Uint256) Sub64(v uint64) Uint256 {
-	lolo, b0 := bits.Sub64(u.Lo.Lo, v, 0)
-	lohi, b1 := bits.Sub64(u.Lo.Hi, 0, b0)
-	hilo, b2 := bits.Sub64(u.Hi.Lo, 0, b1)
-	hihi, _ := bits.Sub64(u.Hi.Hi, 0, b2)
-	return Uint256{
-		Lo: Uint128{Lo: lolo, Hi: lohi},
-		Hi: Uint128{Lo: hilo, Hi: hihi},
-	}
+// Sub128 returns difference (u-v) of 256-bit and 128-bit values.
+// Wrap-around semantic is used here: Zero().Sub128(uint128.One()) == Max().
+func (u Uint256) Sub128(v Uint128) Uint256 {
+	lo, b0 := uint128.Sub(u.Lo, v, 0)
+	return Uint256{Lo: lo, Hi: u.Hi.Sub64(b0)}
+}
+
+// Mul returns the 512-bit product of x and y: (hi, lo) = x * y
+// with the product bits' upper half returned in hi and the lower
+// half returned in lo.
+func Mul(x, y Uint256) (hi, lo Uint256) {
+	lo.Hi, lo.Lo = uint128.Mul(x.Lo, y.Lo)
+	hi.Hi, hi.Lo = uint128.Mul(x.Hi, y.Hi)
+	t0, t1 := uint128.Mul(x.Lo, y.Hi)
+	t2, t3 := uint128.Mul(x.Hi, y.Lo)
+
+	var c0, c1 uint64
+	lo.Hi, c0 = uint128.Add(lo.Hi, t1, 0)
+	lo.Hi, c1 = uint128.Add(lo.Hi, t3, 0)
+	hi.Lo, c0 = uint128.Add(hi.Lo, t0, c0)
+	hi.Lo, c1 = uint128.Add(hi.Lo, t2, c1)
+	hi.Hi = hi.Hi.Add64(c0 + c1)
+
+	return
 }
 
 // Mul returns multiplication (u*v) of two 256-bit values.
 // Wrap-around semantic is used here: Max().Mul(Max()) == From64(1).
 func (u Uint256) Mul(v Uint256) Uint256 {
-	/*hi, lo := bits.Mul64(u.Lo, v.Lo)
-	hi += u.Hi*v.Lo + u.Lo*v.Hi
-	return Uint256{Lo: lo, Hi: hi}*/
-	return Zero()
+	hi, lo := uint128.Mul(u.Lo, v.Lo)
+	hi = hi.Add(u.Hi.Mul(v.Lo))
+	hi = hi.Add(u.Lo.Mul(v.Hi))
+	return Uint256{Lo: lo, Hi: hi}
 }
 
-// Mul64 returns multiplication (u*v) of 256-bit and 64-bit values.
-// Wrap-around semantic is used here: Max().Mul64(2) == Max().Sub64(1).
-func (u Uint256) Mul64(v uint64) Uint256 {
-	/*hi, lo := bits.Mul64(u.Lo, v)
+// Mul128 returns multiplication (u*v) of 256-bit and 128-bit values.
+// Wrap-around semantic is used here: Max().Mul128(2) == Max().Sub128(1).
+func (u Uint256) Mul128(v Uint128) Uint256 {
+	hi, lo := uint128.Mul(u.Lo, v)
 	return Uint256{
 		Lo: lo,
-		Hi: hi + u.Hi*v,
-	}*/
-	return Zero()
+		Hi: hi.Add(u.Hi.Mul(v)),
+	}
 }
 
 // Div returns division (u/v) of two 256-bit values.
@@ -307,9 +334,9 @@ func (u Uint256) Div(v Uint256) Uint256 {
 	return q
 }
 
-// Div64 returns division (u/v) of 256-bit and 64-bit values.
-func (u Uint256) Div64(v uint64) Uint256 {
-	q, _ := u.QuoRem64(v)
+// Div128 returns division (u/v) of 256-bit and 128-bit values.
+func (u Uint256) Div128(v Uint128) Uint256 {
+	q, _ := u.QuoRem128(v)
 	return q
 }
 
@@ -319,52 +346,93 @@ func (u Uint256) Mod(v Uint256) Uint256 {
 	return r
 }
 
-// Mod64 returns modulo (u%v) of 256-bit and 64-bit values.
-func (u Uint256) Mod64(v uint64) uint64 {
-	_, r := u.QuoRem64(v)
+// Mod64 returns modulo (u%v) of 256-bit and 128-bit values.
+func (u Uint256) Mod128(v Uint128) Uint128 {
+	_, r := u.QuoRem128(v)
 	return r
 }
 
 // QuoRem returns quotient (u/v) and remainder (u%v) of two 256-bit values.
 func (u Uint256) QuoRem(v Uint256) (Uint256, Uint256) {
-	/*if v.Hi.IsZero() {
+	if v.Hi.IsZero() {
 		q, r := u.QuoRem128(v.Lo)
 		return q, From128(r)
 	}
 
 	// generate a "trial quotient," guaranteed to be
 	// within 1 of the actual quotient, then adjust.
-	n := uint(bits.LeadingZeros64(v.Hi))
+	n := uint(v.Hi.LeadingZeros())
 	u1, v1 := u.Rsh(1), v.Lsh(n)
-	tq, _ := bits.Div64(u1.Hi, u1.Lo, v1.Hi)
-	tq >>= 63 - n
-	if tq != 0 {
-		tq--
+	tq, _ := div128(u1.Hi, u1.Lo, v1.Hi)
+	tq = tq.Rsh(127 - n)
+	if !tq.IsZero() {
+		tq = tq.Sub64(1)
 	}
 
 	// calculate remainder using trial quotient, then
 	// adjust if remainder is greater than divisor
-	q, r := From64(tq), u.Sub(v.Mul64(tq))
+	q, r := From128(tq), u.Sub(v.Mul128(tq))
 	if r.Cmp(v) >= 0 {
-		q = q.Add64(1)
+		q = q.Add128(uint128.One())
 		r = r.Sub(v)
 	}
 
-	return q, r*/
-	return Zero(), Zero()
+	return q, r
 }
 
-// QuoRem64 returns quotient (u/v) and remainder (u%v) of 256-bit and 64-bit values.
-func (u Uint256) QuoRem64(v uint64) (Uint256, uint64) {
-	/*if u.Hi < v {
-		lo, r := bits.Div64(u.Hi, u.Lo, v)
+// QuoRem64 returns quotient (u/v) and remainder (u%v) of 256-bit and 128-bit values.
+func (u Uint256) QuoRem128(v Uint128) (Uint256, Uint128) {
+	if u.Hi.Cmp(v) < 0 {
+		lo, r := div128(u.Hi, u.Lo, v)
 		return Uint256{Lo: lo}, r
 	}
 
-	hi, r := bits.Div64(0, u.Hi, v)
-	lo, r := bits.Div64(r, u.Lo, v)
-	return Uint256{Lo: lo, Hi: hi}, r*/
-	return Zero(), 0
+	hi, r := div128(uint128.Zero(), u.Hi, v)
+	lo, r := div128(r, u.Lo, v)
+	return Uint256{Lo: lo, Hi: hi}, r
+}
+
+// div128 returns the quotient and remainder of (hi, lo) divided by y:
+// quo = (hi, lo)/y, rem = (hi, lo)%y with the dividend bits' upper
+// half in parameter hi and the lower half in parameter lo.
+func div128(hi, lo, y Uint128) (quo, rem Uint128) {
+	// if y.IsZero() {
+	// 	panic(divideError)
+	// }
+	// if y.Cmp(hi) <= 0 {
+	// 	panic(overflowError)
+	// }
+
+	s := uint(y.LeadingZeros())
+	y = y.Lsh(s)
+
+	un32 := hi.Lsh(s).Or(lo.Rsh(128 - s))
+	un10 := lo.Lsh(s)
+	q1, rhat := un32.QuoRem64(y.Hi)
+	r1 := uint128.From64(rhat)
+
+	for q1.Hi != 0 || q1.Mul64(y.Lo).Cmp(Uint128{Hi: r1.Lo, Lo: un10.Hi}) > 0 {
+		q1 = q1.Sub64(1)
+		r1 = r1.Add64(y.Hi)
+		if r1.Hi != 0 {
+			break
+		}
+	}
+
+	un21 := Uint128{Hi: un32.Lo, Lo: un10.Hi}.Sub(q1.Mul(y))
+	q0, rhat := un21.QuoRem64(y.Hi)
+	r0 := uint128.From64(rhat)
+
+	for q0.Hi != 0 || q0.Mul64(y.Lo).Cmp(Uint128{Hi: r0.Lo, Lo: un10.Lo}) > 0 {
+		q0 = q0.Sub64(1)
+		r0 = r0.Add64(y.Hi)
+		if r0.Hi != 0 {
+			break
+		}
+	}
+
+	return Uint128{Hi: q1.Lo, Lo: q0.Lo},
+		Uint128{Hi: un21.Lo, Lo: un10.Lo}.Sub(q0.Mul(y)).Rsh(s)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
