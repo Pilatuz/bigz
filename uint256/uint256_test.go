@@ -81,8 +81,8 @@ func TestUint128Helpers(t *testing.T) {
 			if !x.Equals(x) {
 				t.Fatalf("%#x does not equal itself", x)
 			}
-			if !From64(x.Lo.Lo).Equals64(x.Lo.Lo) {
-				t.Fatalf("%#v does not equal64 itself", x)
+			if !From128(x.Lo).Equals128(x.Lo) {
+				t.Fatalf("%#v does not equal128 itself", x)
 			}
 		}
 	})
@@ -161,13 +161,14 @@ func checkBinOp128(t *testing.T, x Uint256, op string, y Uint128, fn BinOp128, f
 		t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
 	}
 }
-func checkBinOp64(t *testing.T, x Uint256, op string, y uint64, fn BinOp64, fnb BigBinOp) {
+
+/*func checkBinOp64(t *testing.T, x Uint256, op string, y uint64, fn BinOp64, fnb BigBinOp) {
 	t.Helper()
 	expected := mod256(fnb(new(big.Int), x.Big(), From64(y).Big()))
 	if got := fn(x, y); expected.Cmp(got.Big()) != 0 {
 		t.Fatalf("mismatch: (%#x %v %#x) should equal %#x, got %#x", x, op, y, expected, got)
 	}
-}
+}*/
 
 // z = op(x, n)
 func checkShiftOp(t *testing.T, x Uint256, op string, n uint, fn ShiftOp, fnb BigShiftOp) {
@@ -218,7 +219,7 @@ func TestArithmetic(t *testing.T) {
 			checkBinOp(t, x, "|", y, Uint256.Or, (*big.Int).Or)
 			checkBinOp(t, x, "^", y, Uint256.Xor, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(y.Big()), x.Cmp(y); expected != got {
-				t.Fatalf("mismatch: cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
+				t.Fatalf("mismatch: Cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
 			}
 
 			// 256 op 128
@@ -233,14 +234,13 @@ func TestArithmetic(t *testing.T) {
 				checkBinOp128(t, x, "/", y128, Uint256.Div128, (*big.Int).Div)
 				checkBinOp128(t, x, "%", y128, mod128, (*big.Int).Mod)
 			}
-			y64 := y128.Lo
-			checkBinOp64(t, x, "&^", y64, Uint256.AndNot64, (*big.Int).AndNot)
-			checkBinOp64(t, x, "&", y64, Uint256.And64, (*big.Int).And)
-			checkBinOp64(t, x, "|", y64, Uint256.Or64, (*big.Int).Or)
-			checkBinOp64(t, x, "^", y64, Uint256.Xor64, (*big.Int).Xor)
-			if expected, got := x.Big().Cmp(From64(y64).Big()), x.Cmp64(y64); expected != got {
-				t.Fatalf("mismatch: cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
+			if expected, got := x.Big().Cmp(From128(y128).Big()), x.Cmp128(y128); expected != got {
+				t.Fatalf("mismatch: Cmp128(%#x,%#x) should equal %v, got %v", x, y128, expected, got)
 			}
+			checkBinOp128(t, x, "&^", y128, Uint256.AndNot128, (*big.Int).AndNot)
+			checkBinOp128(t, x, "&", y128, Uint256.And128, (*big.Int).And)
+			checkBinOp128(t, x, "|", y128, Uint256.Or128, (*big.Int).Or)
+			checkBinOp128(t, x, "^", y128, Uint256.Xor128, (*big.Int).Xor)
 
 			// shift op
 			z := uint(y.Lo.Lo & 0xFF)
@@ -252,7 +252,7 @@ func TestArithmetic(t *testing.T) {
 		if got := x.Cmp(x); got != 0 {
 			t.Fatalf("%#x does not equal itself, got %v", x, got)
 		}
-		if got := From64(x.Lo.Lo).Cmp64(x.Lo.Lo); got != 0 {
+		if got := From128(x.Lo).Cmp128(x.Lo); got != 0 {
 			t.Fatalf("%#x does not equal itself, got %v", x.Lo, got)
 		}
 

@@ -195,7 +195,7 @@ func TestArithmetic(t *testing.T) {
 			checkBinOp(t, x, "|", y, Uint128.Or, (*big.Int).Or)
 			checkBinOp(t, x, "^", y, Uint128.Xor, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(y.Big()), x.Cmp(y); expected != got {
-				t.Fatalf("mismatch: cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
+				t.Fatalf("mismatch: Cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
 			}
 
 			// 128 op 64
@@ -215,7 +215,7 @@ func TestArithmetic(t *testing.T) {
 			checkBinOp64(t, x, "|", y64, Uint128.Or64, (*big.Int).Or)
 			checkBinOp64(t, x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(From64(y64).Big()), x.Cmp64(y64); expected != got {
-				t.Fatalf("mismatch: cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
+				t.Fatalf("mismatch: Cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
 			}
 
 			// shift op

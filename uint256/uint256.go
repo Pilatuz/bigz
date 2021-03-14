@@ -115,9 +115,9 @@ func (u Uint256) Equals(v Uint256) bool {
 	return u.Lo.Equals(v.Lo) && u.Hi.Equals(v.Hi)
 }
 
-// Equals64 returns true if 256-bit value equals to a 64-bit value.
-func (u Uint256) Equals64(v uint64) bool {
-	return u.Lo.Equals64(v) && u.Hi.IsZero()
+// Equals64 returns true if 256-bit value equals to a 128-bit value.
+func (u Uint256) Equals128(v Uint128) bool {
+	return u.Lo.Equals(v) && u.Hi.IsZero()
 }
 
 // Cmp compares two 256-bit values and returns:
@@ -125,45 +125,22 @@ func (u Uint256) Equals64(v uint64) bool {
 //    0 if u == v
 //   +1 if u >  v
 func (u Uint256) Cmp(v Uint256) int {
-	switch {
-	case u.Hi.Hi > v.Hi.Hi:
-		return +1 // u > v
-	case u.Hi.Hi < v.Hi.Hi:
-		return -1 // u < v
-	case u.Hi.Lo > v.Hi.Lo:
-		return +1 // u > v
-	case u.Hi.Lo < v.Hi.Lo:
-		return -1 // u < v
-	case u.Lo.Hi > v.Lo.Hi:
-		return +1 // u > v
-	case u.Lo.Hi < v.Lo.Hi:
-		return -1 // u < v
-	case u.Lo.Lo > v.Lo.Lo:
-		return +1 // u > v
-	case u.Lo.Lo < v.Lo.Lo:
-		return -1 // u < v
+	if h := u.Hi.Cmp(v.Hi); h != 0 {
+		return h
 	}
-	return 0 // u == v
+	return u.Lo.Cmp(v.Lo)
 }
 
-// Cmp64 compares 256-bit and 64-bit values and returns:
+// Cmp64 compares 256-bit and 128-bit values and returns:
 //   -1 if u <  v
 //    0 if u == v
 //   +1 if u >  v
-func (u Uint256) Cmp64(v uint64) int {
+func (u Uint256) Cmp128(v Uint128) int {
 	switch {
-	case u.Hi.Hi != 0:
+	case !u.Hi.IsZero():
 		return +1 // u > v
-	case u.Hi.Lo != 0:
-		return +1 // u > v
-	case u.Lo.Hi != 0:
-		return +1 // u > v
-	case u.Lo.Lo > v:
-		return +1 // u > v
-	case u.Lo.Lo < v:
-		return -1 // u < v
 	}
-	return 0 // u == v
+	return u.Lo.Cmp(v)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -185,10 +162,10 @@ func (u Uint256) AndNot(v Uint256) Uint256 {
 	}
 }
 
-// AndNot64 returns logical AND NOT (u&v) of 256-bit and 64-bit values.
-func (u Uint256) AndNot64(v uint64) Uint256 {
+// AndNot64 returns logical AND NOT (u&v) of 256-bit and 128-bit values.
+func (u Uint256) AndNot128(v Uint128) Uint256 {
 	return Uint256{
-		Lo: u.Lo.AndNot64(v),
+		Lo: u.Lo.AndNot(v),
 		Hi: u.Hi, // ^0 == ff..ff
 	}
 }
@@ -201,10 +178,10 @@ func (u Uint256) And(v Uint256) Uint256 {
 	}
 }
 
-// And64 returns logical AND (u&v) of 256-bit and 64-bit values.
-func (u Uint256) And64(v uint64) Uint256 {
+// And64 returns logical AND (u&v) of 256-bit and 128-bit values.
+func (u Uint256) And128(v Uint128) Uint256 {
 	return Uint256{
-		Lo: u.Lo.And64(v),
+		Lo: u.Lo.And(v),
 		// Hi: Uint128{0, 0},
 	}
 }
@@ -217,10 +194,10 @@ func (u Uint256) Or(v Uint256) Uint256 {
 	}
 }
 
-// Or64 returns logical OR (u|v) of 256-bit and 64-bit values.
-func (u Uint256) Or64(v uint64) Uint256 {
+// Or64 returns logical OR (u|v) of 256-bit and 128-bit values.
+func (u Uint256) Or128(v Uint128) Uint256 {
 	return Uint256{
-		Lo: u.Lo.Or64(v),
+		Lo: u.Lo.Or(v),
 		Hi: u.Hi,
 	}
 }
@@ -233,10 +210,10 @@ func (u Uint256) Xor(v Uint256) Uint256 {
 	}
 }
 
-// Xor64 returns logical XOR (u^v) of 256-bit and 64-bit values.
-func (u Uint256) Xor64(v uint64) Uint256 {
+// Xor64 returns logical XOR (u^v) of 256-bit and 128-bit values.
+func (u Uint256) Xor128(v Uint128) Uint256 {
 	return Uint256{
-		Lo: u.Lo.Xor64(v),
+		Lo: u.Lo.Xor(v),
 		Hi: u.Hi,
 	}
 }
