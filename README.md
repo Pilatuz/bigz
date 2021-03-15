@@ -5,6 +5,8 @@ operations. Unlike `math/big`, operations on `Uint128` always produce new values
 instead of modifying a pointer receiver. A `Uint128` value is therefore immutable, just
 like `uint64` and friends.
 
+`bigx/uint256` provides similar `Uint256` type (note, 256-bit division is still subject for some optimizations).
+
 Released under the [MIT License](LICENSE).
 
 
@@ -14,7 +16,7 @@ Released under the [MIT License](LICENSE).
 go get github.com/Pilatuz/bigx
 ```
 
-The name `uint128.Uint128` stutters, so it is recommended either using a "facade" package:
+The name `uint128.Uint128` and `uint256.Uint256` stutter, so it is recommended either using a "facade" package:
 
 ```go
 import (
@@ -22,16 +24,19 @@ import (
 )
 
 // then use bigx.Uint128 type
+// then use bigx.Uint256 type
 ```
 
-or type aliasing `uint128.Uint128` to give it a project-specific name:
+or type aliasing to give it a project-specific name:
 
 ```go
 import (
     "github.com/Pilatuz/bigx/uint128"
+    "github.com/Pilatuz/bigx/uint256"
 )
 
 type U128 = uint128.Uint128
+type U256 = uint256.Uint256
 ```
 
 
@@ -46,70 +51,74 @@ The key differences from [original package](https://github.com/lukechampine/uint
 - Trivial (via `big.Int`) implementation of TextMarshaller and TextUnmarshaler interfaces to support JSON encoding.
 - Store/Load methods support little-endian and big-endian byte order.
 - New `Not` and `AndNot` methods.
+- New `uint256.Uint256` type.
 
 
 ## Quick Start
 
-The 128-bit integer can be initialized in the following ways:
+The 128-bit or 256-bit integer can be initialized in the following ways:
 
-| Method                             | Description                                       |
-|------------------------------------|---------------------------------------------------|
-| `u := Uint128{Lo: lo64, Hi: hi64}` | Set both low and high 64-bit halfs.               |
-| `u := From64(lo64)`                | Set only low 64-bit half.                         |
-| `u := Zero()`                      | The same as `From64(0)`.                          |
-| `u := One()`                       | The same as `From64(1)`.                          |
-| `u := Max()`                       | The largest possible 128-bit value (`2^128 - 1`). |
-| `u := FromBig(big)`                | Convert from `*big.Int` with saturation.          |
-| `u := FromBigX(big)`               | The same as `FromBig` but provides `ok` flag.     |
+| `uint128` 128-bit package          | `uint256` 256-bit package            | Description                                       |
+|------------------------------------|--------------------------------------|---------------------------------------------------|
+| `u := Uint128{Lo: lo64, Hi: hi64}` | `u := Uint256{Lo: lo128, Hi: hi128}` | Set both lower and upper halfs.                   |
+| `u := From64(lo64)`                | `u := From128(lo128)`                | Set only lower half.                              |
+|                                    | `u := From64(lo64)`                  | Set only lower 64-bit.                            |
+| `u := Zero()`                      | `u := Zero()`                        | The same as `From64(0)`.                          |
+| `u := One()`                       | `u := One()`                         | The same as `From64(1)`.                          |
+| `u := Max()`                       | `u := Max()`                         | The largest possible value.                       |
+| `u := FromBig(big)`                | `u := FromBig(big)`                  | Convert from `*big.Int` with saturation.          |
+| `u := FromBigX(big)`               | `u := FromBigX(big)`                 | The same as `FromBig` but provides `ok` flag.     |
 
 The following arithmetic operations are supported:
 
-| 128-bit    | 64-bit       | Standard `*big.Int` equivalent                                  |
-|------------|--------------|-----------------------------------------------------------------|
-| `u.Add`    | `u.Add64`    | [`big.Int.Add`](https://golang.org/pkg/math/big/#Int.Add)       |
-| `u.Sub`    | `u.Sub64`    | [`big.Int.Sub`](https://golang.org/pkg/math/big/#Int.Sub)       |
-| `u.Mul`    | `u.Mul64`    | [`big.Int.Mul`](https://golang.org/pkg/math/big/#Int.Mul)       |
-| `u.Div`    | `u.Div64`    | [`big.Int.Div`](https://golang.org/pkg/math/big/#Int.Div)       |
-| `u.Mod`    | `u.Mod64`    | [`big.Int.Mod`](https://golang.org/pkg/math/big/#Int.Mod)       |
-| `u.QuoRem` | `u.QuoRem64` | [`big.Int.QuoRem`](https://golang.org/pkg/math/big/#Int.QuoRem) |
+| `bigx.Uint128`           | `bigx.Uint256`            | Standard `*big.Int` equivalent                                  |
+|--------------------------|---------------------------|-----------------------------------------------------------------|
+| `u.Add`, `u.Add64`       | `u.Add`, `u.Add128`       | [`big.Int.Add`](https://golang.org/pkg/math/big/#Int.Add)       |
+| `u.Sub`, `u.Sub64`       | `u.Sub`, `u.Sub128`       | [`big.Int.Sub`](https://golang.org/pkg/math/big/#Int.Sub)       |
+| `u.Mul`, `u.Mul64`       | `u.Mul`, `u.Mul128`       | [`big.Int.Mul`](https://golang.org/pkg/math/big/#Int.Mul)       |
+| `u.Div`, `u.Div64`       | `u.Div`, `u.Div128`       | [`big.Int.Div`](https://golang.org/pkg/math/big/#Int.Div)       |
+| `u.Mod`, `u.Mod64`       | `u.Mod`, `u.Mod128`       | [`big.Int.Mod`](https://golang.org/pkg/math/big/#Int.Mod)       |
+| `u.QuoRem`, `u.QuoRem64` | `u.QuoRem`, `u.QuoRem128` | [`big.Int.QuoRem`](https://golang.org/pkg/math/big/#Int.QuoRem) |
 
 The following logical and comparison operations are supported:
 
-| 128-bit    | 64-bit       | Standard `*big.Int` equivalent                                  |
-|------------|--------------|-----------------------------------------------------------------|
-| `u.Equals` | `u.Equals64` | [`big.Int.Cmp == 0`](https://golang.org/pkg/math/big/#Int.Cmp)  |
-| `u.Cmp`    | `u.Cmp64`    | [`big.Int.Cmp`](https://golang.org/pkg/math/big/#Int.Cmp)       |
-| `u.Not`    |              | [`big.Int.Not`](https://golang.org/pkg/math/big/#Int.Not)       |
-| `u.AndNot` | `u.AndNot64` | [`big.Int.AndNot`](https://golang.org/pkg/math/big/#Int.AndNot) |
-| `u.And`    | `u.And64`    | [`big.Int.And`](https://golang.org/pkg/math/big/#Int.And)       |
-| `u.Or`     | `u.Or64`     | [`big.Int.Or`](https://golang.org/pkg/math/big/#Int.Or)         |
-| `u.Xor`    | `u.Xor64`    | [`big.Int.Xor`](https://golang.org/pkg/math/big/#Int.Xor)       |
-| `u.Lsh`    |              | [`big.Int.Lsh`](https://golang.org/pkg/math/big/#Int.Lsh)       |
-| `u.Rsh`    |              | [`big.Int.Rsh`](https://golang.org/pkg/math/big/#Int.Rsh)       |
+| `bigx.Uint128`           | `bigx.Uint1256`           | Standard `*big.Int` equivalent                                  |
+|--------------------------|---------------------------|-----------------------------------------------------------------|
+| `u.Equals`, `u.Equals64` | `u.Equals`, `u.Equals128` | [`big.Int.Cmp == 0`](https://golang.org/pkg/math/big/#Int.Cmp)  |
+| `u.Cmp`, `u.Cmp64`       | `u.Cmp`     `u.Cmp64`     | [`big.Int.Cmp`](https://golang.org/pkg/math/big/#Int.Cmp)       |
+| `u.Not`                  | `u.Not`                   | [`big.Int.Not`](https://golang.org/pkg/math/big/#Int.Not)       |
+| `u.AndNot`, `u.AndNot64` | `u.AndNot`, `u.AndNot128` | [`big.Int.AndNot`](https://golang.org/pkg/math/big/#Int.AndNot) |
+| `u.And`, `u.And64`       | `u.And`, `u.And128`       | [`big.Int.And`](https://golang.org/pkg/math/big/#Int.And)       |
+| `u.Or`, `u.Or64`         | `u.Or`, `u.Or128`         | [`big.Int.Or`](https://golang.org/pkg/math/big/#Int.Or)         |
+| `u.Xor`, `u.Xor64`       | `u.Xor`, `u.Xor128`       | [`big.Int.Xor`](https://golang.org/pkg/math/big/#Int.Xor)       |
+| `u.Lsh`                  | `u.Lsh`                   | [`big.Int.Lsh`](https://golang.org/pkg/math/big/#Int.Lsh)       |
+| `u.Rsh`                  | `u.Rsh`                   | [`big.Int.Rsh`](https://golang.org/pkg/math/big/#Int.Rsh)       |
 
 The following bit operations are supported:
 
-| 128-bit           | Standard 64-bit equivalent                                                  |
-|-------------------|-----------------------------------------------------------------------------|
-| `u.RotateLeft`    | [`bits.RotateLeft64`](https://golang.org/pkg/math/bits/#RotateLeft64)       |
-| `u.RotateRight`   | [`bits.RotateRight64`](https://golang.org/pkg/math/bits/#RotateRight64)     |
-| `u.BitLen`        | [`bits.Len64`](https://golang.org/pkg/math/bits/#Len64) or [`big.Int.BitLen`](https://golang.org/pkg/math/big/#Int.BitLen) |
-| `u.LeadingZeros`  | [`bits.LeadingZeros64`](https://golang.org/pkg/math/bits/#LeadingZeros64)   |
-| `u.TrailingZeros` | [`bits.TrailingZeros64`](https://golang.org/pkg/math/bits/#TrailingZeros64) |
-| `u.OnesCount`     | [`bits.OnesCount64`](https://golang.org/pkg/math/bits/#OnesCount64)         |
-| `u.Reverse`       | [`bits.Reverse64`](https://golang.org/pkg/math/bits/#Reverse64)             |
-| `u.ReverseBytes`  | [`bits.ReverseBytes64`](https://golang.org/pkg/math/bits/#ReverseBytes64)   |
+| `bigx.Uint128`    | `bigx.Uint256`    | Standard 64-bit equivalent                                                  |
+|-------------------|-------------------|-----------------------------------------------------------------------------|
+| `u.RotateLeft`    | `u.RotateLeft`    | [`bits.RotateLeft64`](https://golang.org/pkg/math/bits/#RotateLeft64)       |
+| `u.RotateRight`   | `u.RotateRight`   | [`bits.RotateRight64`](https://golang.org/pkg/math/bits/#RotateRight64)     |
+| `u.BitLen`        | `u.BitLen`        | [`bits.Len64`](https://golang.org/pkg/math/bits/#Len64) or [`big.Int.BitLen`](https://golang.org/pkg/math/big/#Int.BitLen) |
+| `u.LeadingZeros`  | `u.LeadingZeros`  | [`bits.LeadingZeros64`](https://golang.org/pkg/math/bits/#LeadingZeros64)   |
+| `u.TrailingZeros` | `u.TrailingZeros` | [`bits.TrailingZeros64`](https://golang.org/pkg/math/bits/#TrailingZeros64) |
+| `u.OnesCount`     | `u.OnesCount`     | [`bits.OnesCount64`](https://golang.org/pkg/math/bits/#OnesCount64)         |
+| `u.Reverse`       | `u.Reverse`       | [`bits.Reverse64`](https://golang.org/pkg/math/bits/#Reverse64)             |
+| `u.ReverseBytes`  | `u.ReverseBytes`  | [`bits.ReverseBytes64`](https://golang.org/pkg/math/bits/#ReverseBytes64)   |
 
 The following miscellaneous operations are supported:
 
-| 128-bit               | Standard equivalent                                                                  |
-|-----------------------|--------------------------------------------------------------------------------------|
-| `u.String`            | [`big.Int.String`](https://golang.org/pkg/math/big/#Int.String)                      |
-| `u.Format`            | [`big.Int.Format`](https://golang.org/pkg/math/big/#Int.Format)                      |
-| `u.StoreLittleEndian` | [`binary.LittleEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder) |
-| `u.LoadLittleEndian`  | [`binary.LittleEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
-| `u.StoreBigEndian`    | [`binary.BigEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
-| `u.LoadBigEndian`     | [`binary.BigEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)       |
+| `bigx.Uint128`      | `bigx.Uint256`      | Standard equivalent                                                                  |
+|---------------------|---------------------|--------------------------------------------------------------------------------------|
+| `u.String`          | `u.String`          | [`big.Int.String`](https://golang.org/pkg/math/big/#Int.String)                      |
+| `u.Format`          | `u.Format`          | [`big.Int.Format`](https://golang.org/pkg/math/big/#Int.Format)                      |
+| `u.MarshalText`     | `u.MarshalText`     | [`big.Int.MarshalText`](https://golang.org/pkg/math/big/#Int.MarshalText)            |
+| `u.UnmarshalText`   | `u.UnmarshalText`   | [`big.Int.UnmarshalText`](https://golang.org/pkg/math/big/#Int.UnmarshalText)        |
+| `StoreLittleEndian` | `StoreLittleEndian` | [`binary.LittleEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder) |
+| `LoadLittleEndian`  | `LoadLittleEndian`  | [`binary.LittleEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
+| `StoreBigEndian`    | `StoreBigEndian`    | [`binary.BigEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)    |
+| `LoadBigEndian`     | `LoadBigEndian`     | [`binary.BigEndian.Uint64`](https://golang.org/pkg/encoding/binary/#ByteOrder)       |
 
 See the [documentation][doc] for a complete API specification.
 

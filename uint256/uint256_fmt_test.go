@@ -1,4 +1,4 @@
-package uint128
+package uint256
 
 import (
 	"encoding/json"
@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestUint128String unit tests for Uint128.String() method
-func TestUint128String(t *testing.T) {
+// TestUint256String unit tests for Uint256.String() method
+func TestUint256String(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		// Zero()
 		if expected, got := "0", Zero().String(); got != expected {
@@ -20,14 +20,14 @@ func TestUint128String(t *testing.T) {
 		}
 
 		// Max()
-		if expected, got := "340282366920938463463374607431768211455", Max().String(); got != expected {
+		if expected, got := "115792089237316195423570985008687907853269984665640564039457584007913129639935", Max().String(); got != expected {
 			t.Errorf("Max() should be %q, got %q", expected, got)
 		}
 	})
 
 	t.Run("rand", func(t *testing.T) {
-		values := make(chan Uint128)
-		go generate128s(1000, values)
+		values := make(chan Uint256)
+		go generate256s(1000, values)
 		for x := range values {
 			if expected, got := x.Big().String(), x.String(); got != expected {
 				t.Fatalf("String() mismatch:\n\t(-) expected %q\n\t(+)   actual %q", expected, got)
@@ -36,14 +36,14 @@ func TestUint128String(t *testing.T) {
 	})
 }
 
-// BenchmarkUint128String performance tests for Uint128.String() method
-func BenchmarkUint128String(b *testing.B) {
+// BenchmarkUint256String performance tests for Uint256.String() method
+func BenchmarkUint256String(b *testing.B) {
 	b.ReportAllocs()
 
-	x := rand128()
+	x := rand256()
 	xb := x.Big()
 
-	b.Run("Uint128", func(b *testing.B) {
+	b.Run("Uint256", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = x.String()
 		}
@@ -56,8 +56,8 @@ func BenchmarkUint128String(b *testing.B) {
 	})
 }
 
-// TestUint128Format unit tests for Uint128.Format() method
-func TestUint128Format(t *testing.T) {
+// TestUint256Format unit tests for Uint256.Format() method
+func TestUint256Format(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		// Zero()
 		if expected, got := "0o0", fmt.Sprintf("%#O", Zero()); got != expected {
@@ -70,7 +70,7 @@ func TestUint128Format(t *testing.T) {
 		}
 
 		// Max()
-		if expected, got := "ffffffffffffffffffffffffffffffff", fmt.Sprintf("%x", Max()); got != expected {
+		if expected, got := "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", fmt.Sprintf("%x", Max()); got != expected {
 			t.Errorf("Max() should be %q, got %q", expected, got)
 		}
 	})
@@ -79,10 +79,10 @@ func TestUint128Format(t *testing.T) {
 // TestStoreLoad unit tests for bytes load/store functions
 func TestStoreLoad(t *testing.T) {
 	t.Run("rand", func(t *testing.T) {
-		values := make(chan Uint128)
-		go generate128s(1000, values)
+		values := make(chan Uint256)
+		go generate256s(1000, values)
 		for x := range values {
-			buf := make([]byte, 16)
+			buf := make([]byte, 32)
 
 			// little-endian
 			StoreLittleEndian(buf, x)
@@ -107,7 +107,7 @@ func TestStoreLoad(t *testing.T) {
 // TestJSON unit tests for marshaling functions
 func TestJSON(t *testing.T) {
 	type Foo struct {
-		Bar Uint128 `json:"bar"`
+		Bar Uint256 `json:"bar"`
 	}
 
 	t.Run("bad", func(t *testing.T) {
@@ -127,8 +127,8 @@ func TestJSON(t *testing.T) {
 	})
 
 	t.Run("rand", func(t *testing.T) {
-		values := make(chan Uint128)
-		go generate128s(1000, values)
+		values := make(chan Uint256)
+		go generate256s(1000, values)
 		for x := range values {
 			buf, err := json.Marshal(Foo{Bar: x})
 			if err != nil {

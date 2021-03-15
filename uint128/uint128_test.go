@@ -13,10 +13,10 @@ func rand128() Uint128 {
 	rand.Read(buf)
 	u := LoadLittleEndian(buf)
 	if buf[16]&0x07 == 0 {
-		u.Lo = 0 // reset low half
+		u.Lo = 0 // reset lower half
 	}
 	if buf[16]&0x70 == 0 {
-		u.Hi = 0 // reset high half
+		u.Hi = 0 // reset upper half
 	}
 	return u
 }
@@ -83,25 +83,25 @@ func TestUint128Bits(t *testing.T) {
 			k := int(x.Lo & 0xFF)
 
 			if expected, got := d.LeadingZeros(), x.LeadingZeros(); got != expected {
-				t.Errorf("mismatch: %#x LeadingZeros should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x LeadingZeros should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.TrailingZeros(), x.TrailingZeros(); got != expected {
-				t.Errorf("mismatch: %#x TrailingZeros should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x TrailingZeros should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.OnesCount(), x.OnesCount(); got != expected {
-				t.Errorf("mismatch: %#x OnesCount should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x OnesCount should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.RotateRight(k), newDummy128(x.RotateRight(k).Big()); !expected.Equals(got) {
-				t.Errorf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.RotateLeft(k), newDummy128(x.RotateLeft(k).Big()); !expected.Equals(got) {
-				t.Errorf("mismatch: %#x RotateLeft should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x RotateLeft should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := d.Reverse(), newDummy128(x.Reverse().Big()); !expected.Equals(got) {
-				t.Errorf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x RotateRight should equal %v, got %v", x, expected, got)
 			}
 			if expected, got := x.Big().BitLen(), x.BitLen(); expected != got {
-				t.Errorf("mismatch: %#x BitLen should equal %v, got %v", x, expected, got)
+				t.Fatalf("mismatch: %#x BitLen should equal %v, got %v", x, expected, got)
 			}
 		}
 	})
@@ -155,6 +155,25 @@ func checkShiftOp(t *testing.T, x Uint128, op string, n uint, fn ShiftOp, fnb Bi
 	}
 }
 
+// TestMul unit tests for full 128-bit multiplication.
+func TestMul(t *testing.T) {
+	xvalues := make(chan Uint128)
+	go generate128s(200, xvalues)
+	for x := range xvalues {
+		yvalues := make(chan Uint128)
+		go generate128s(200, yvalues)
+		for y := range yvalues {
+			hi, lo := Mul(x, y)
+			expected := new(big.Int).Mul(x.Big(), y.Big())
+			got := new(big.Int).Lsh(hi.Big(), 128)
+			got.Or(got, lo.Big())
+			if expected.Cmp(got) != 0 {
+				t.Fatalf("%x * %x != %x, got %x", x, y, expected, got)
+			}
+		}
+	}
+}
+
 // TestArithmetic compare Uint128 arithmetic methods to their math/big equivalents
 func TestArithmetic(t *testing.T) {
 	xvalues := make(chan Uint128)
@@ -176,7 +195,7 @@ func TestArithmetic(t *testing.T) {
 			checkBinOp(t, x, "|", y, Uint128.Or, (*big.Int).Or)
 			checkBinOp(t, x, "^", y, Uint128.Xor, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(y.Big()), x.Cmp(y); expected != got {
-				t.Fatalf("mismatch: cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
+				t.Fatalf("mismatch: Cmp(%#x,%#x) should equal %v, got %v", x, y, expected, got)
 			}
 
 			// 128 op 64
@@ -196,7 +215,7 @@ func TestArithmetic(t *testing.T) {
 			checkBinOp64(t, x, "|", y64, Uint128.Or64, (*big.Int).Or)
 			checkBinOp64(t, x, "^", y64, Uint128.Xor64, (*big.Int).Xor)
 			if expected, got := x.Big().Cmp(From64(y64).Big()), x.Cmp64(y64); expected != got {
-				t.Fatalf("mismatch: cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
+				t.Fatalf("mismatch: Cmp64(%#x,%#x) should equal %v, got %v", x, y64, expected, got)
 			}
 
 			// shift op

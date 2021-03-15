@@ -31,16 +31,16 @@ func Max() Uint128 {
 // Uint128 is an unsigned 128-bit number.
 // All methods are immutable, works just like standard uint64.
 type Uint128 struct {
-	Lo uint64 // low 64-bit half
-	Hi uint64 // high 64-bit half
+	Lo uint64 // lower 64-bit half
+	Hi uint64 // upper 64-bit half
 }
 
 // Note, there in no New(lo, hi) just not to confuse
-// which half goes first: low or high.
+// which half goes first: lower or upper.
 // Use structure initialization Uint128{Lo: ..., Hi: ...} instead.
 
 // From64 converts 64-bit value v to a Uint128 value.
-// High 64-bit half will be zero.
+// Upper 64-bit half will be zero.
 func From64(v uint64) Uint128 {
 	return Uint128{Lo: v}
 }
@@ -69,9 +69,10 @@ func FromBigX(i *big.Int) (Uint128, bool) {
 
 	// Note, actually result of big.Int.Uint64 is undefined
 	// if stored value is greater than 2^64
-	// but we assume that it just gets low 64 bits.
+	// but we assume that it just gets lower 64 bits.
+	t := new(big.Int)
 	lo := i.Uint64()
-	hi := new(big.Int).Rsh(i, 64).Uint64()
+	hi := t.Rsh(i, 64).Uint64()
 	return Uint128{
 		Lo: lo,
 		Hi: hi,
@@ -215,12 +216,20 @@ func (u Uint128) Xor64(v uint64) Uint128 {
 ///////////////////////////////////////////////////////////////////////////////
 /// arithmetic operators //////////////////////////////////////////////////////
 
+// Add returns the sum with carry of x, y and carry: sum = x + y + carry.
+// The carry input must be 0 or 1; otherwise the behavior is undefined.
+// The carryOut output is guaranteed to be 0 or 1.
+func Add(x, y Uint128, carry uint64) (sum Uint128, carryOut uint64) {
+	sum.Lo, carryOut = bits.Add64(x.Lo, y.Lo, carry)
+	sum.Hi, carryOut = bits.Add64(x.Hi, y.Hi, carryOut)
+	return
+}
+
 // Add returns sum (u+v) of two 128-bit values.
 // Wrap-around semantic is used here: Max().Add(From64(1)) == Zero()
 func (u Uint128) Add(v Uint128) Uint128 {
-	lo, c0 := bits.Add64(u.Lo, v.Lo, 0)
-	hi, _ := bits.Add64(u.Hi, v.Hi, c0)
-	return Uint128{Lo: lo, Hi: hi}
+	sum, _ := Add(u, v, 0)
+	return sum
 }
 
 // Add64 returns sum u+v of 128-bit and 64-bit values.
@@ -230,12 +239,20 @@ func (u Uint128) Add64(v uint64) Uint128 {
 	return Uint128{Lo: lo, Hi: u.Hi + c0}
 }
 
+// Sub returns the difference of x, y and borrow: diff = x - y - borrow.
+// The borrow input must be 0 or 1; otherwise the behavior is undefined.
+// The borrowOut output is guaranteed to be 0 or 1.
+func Sub(x, y Uint128, borrow uint64) (diff Uint128, borrowOut uint64) {
+	diff.Lo, borrowOut = bits.Sub64(x.Lo, y.Lo, borrow)
+	diff.Hi, borrowOut = bits.Sub64(x.Hi, y.Hi, borrowOut)
+	return
+}
+
 // Sub returns difference (u-v) of two 128-bit values.
 // Wrap-around semantic is used here: Zero().Sub(From64(1)) == Max().
 func (u Uint128) Sub(v Uint128) Uint128 {
-	lo, b0 := bits.Sub64(u.Lo, v.Lo, 0)
-	hi, _ := bits.Sub64(u.Hi, v.Hi, b0)
-	return Uint128{Lo: lo, Hi: hi}
+	diff, _ := Sub(u, v, 0)
+	return diff
 }
 
 // Sub64 returns difference (u-v) of 128-bit and 64-bit values.
@@ -243,6 +260,25 @@ func (u Uint128) Sub(v Uint128) Uint128 {
 func (u Uint128) Sub64(v uint64) Uint128 {
 	lo, b0 := bits.Sub64(u.Lo, v, 0)
 	return Uint128{Lo: lo, Hi: u.Hi - b0}
+}
+
+// Mul returns the 256-bit product of x and y: (hi, lo) = x * y
+// with the product bits' upper half returned in hi and the lower
+// half returned in lo.
+func Mul(x, y Uint128) (hi, lo Uint128) {
+	lo.Hi, lo.Lo = bits.Mul64(x.Lo, y.Lo)
+	hi.Hi, hi.Lo = bits.Mul64(x.Hi, y.Hi)
+	t0, t1 := bits.Mul64(x.Lo, y.Hi)
+	t2, t3 := bits.Mul64(x.Hi, y.Lo)
+
+	var c0, c1 uint64
+	lo.Hi, c0 = bits.Add64(lo.Hi, t1, 0)
+	lo.Hi, c1 = bits.Add64(lo.Hi, t3, 0)
+	hi.Lo, c0 = bits.Add64(hi.Lo, t0, c0)
+	hi.Lo, c1 = bits.Add64(hi.Lo, t2, c1)
+	hi.Hi += c0 + c1
+
+	return
 }
 
 // Mul returns multiplication (u*v) of two 128-bit values.
@@ -294,7 +330,7 @@ func (u Uint128) QuoRem(v Uint128) (Uint128, Uint128) {
 		return q, From64(r)
 	}
 
-	// generate a "trial quotient," guaranteed to be
+	// generate a "trial quotient" guaranteed to be
 	// within 1 of the actual quotient, then adjust.
 	n := uint(bits.LeadingZeros64(v.Hi))
 	u1, v1 := u.Rsh(1), v.Lsh(n)
@@ -366,9 +402,11 @@ func (u Uint128) RotateLeft(k int) Uint128 {
 
 	if n < 64 {
 		if n == 0 {
+			// no shift
 			return u
 		}
 
+		// shift by [1..63]
 		return Uint128{
 			Lo: u.Lo<<n | u.Hi>>(64-n),
 			Hi: u.Hi<<n | u.Lo>>(64-n),
@@ -377,12 +415,14 @@ func (u Uint128) RotateLeft(k int) Uint128 {
 
 	n -= 64
 	if n == 0 {
+		// shift by 64
 		return Uint128{
 			Lo: u.Hi,
 			Hi: u.Lo,
 		}
 	}
 
+	// shift by [65..127]
 	return Uint128{
 		Lo: u.Lo>>(64-n) | u.Hi<<n,
 		Hi: u.Hi>>(64-n) | u.Lo<<n,
