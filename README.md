@@ -13,14 +13,14 @@ Released under the [MIT License](LICENSE).
 ## Installation
 
 ```shell
-go get github.com/Pilatuz/bigx
+go get github.com/Pilatuz/bigx/v2
 ```
 
 The name `uint128.Uint128` and `uint256.Uint256` stutter, so it is recommended either using a "facade" package:
 
 ```go
 import (
-    "github.com/Pilatuz/bigx"
+    "github.com/Pilatuz/bigx/v2"
 )
 
 // then use bigx.Uint128 type
@@ -31,8 +31,8 @@ or type aliasing to give it a project-specific name:
 
 ```go
 import (
-    "github.com/Pilatuz/bigx/uint128"
-    "github.com/Pilatuz/bigx/uint256"
+    "github.com/Pilatuz/bigx/v2/uint128"
+    "github.com/Pilatuz/bigx/v2/uint256"
 )
 
 type U128 = uint128.Uint128
@@ -123,8 +123,8 @@ The following miscellaneous operations are supported:
 See the [documentation][doc] for a complete API specification.
 
 
-[doc-img]: https://godoc.org/github.com/Pilatuz/bigx?status.svg
-[doc]: https://godoc.org/github.com/Pilatuz/bigx
+[doc-img]: https://godoc.org/github.com/Pilatuz/bigx/v2?status.svg
+[doc]: https://godoc.org/github.com/Pilatuz/bigx/v2
 [ci-img]: https://travis-ci.com/Pilatuz/bigx.svg?branch=master
 [ci]: https://travis-ci.com/Pilatuz/bigx
 [cov-img]: https://codecov.io/gh/Pilatuz/bigx/branch/master/graph/badge.svg

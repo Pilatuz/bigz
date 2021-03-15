@@ -1,7 +1,7 @@
 package bigx
 
 import (
-	"github.com/Pilatuz/bigx/uint256"
+	"github.com/Pilatuz/bigx/v2/uint256"
 )
 
 // Uint256 is type alias for 256-bit unsigned integer.

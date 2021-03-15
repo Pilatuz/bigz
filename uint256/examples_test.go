@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Pilatuz/bigx/uint256"
+	"github.com/Pilatuz/bigx/v2/uint256"
 )
 
 // ExampleFromBig is an example for FromBig.

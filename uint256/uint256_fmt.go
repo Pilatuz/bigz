@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Pilatuz/bigx/uint128"
+	"github.com/Pilatuz/bigx/v2/uint128"
 )
 
 // String returns the base-10 representation of 256-bit value.

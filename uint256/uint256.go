@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"math/bits"
 
-	"github.com/Pilatuz/bigx/uint128"
+	"github.com/Pilatuz/bigx/v2/uint128"
 )
 
 // Note, Zero and Max are functions just to make read-only values.
