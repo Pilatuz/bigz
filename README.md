@@ -5,7 +5,7 @@ operations. Unlike `math/big`, operations on `Uint128` always produce new values
 instead of modifying a pointer receiver. A `Uint128` value is therefore immutable, just
 like `uint64` and friends.
 
-`bigx/uint256` provides similar `Uint256` type.
+`bigx/uint256` provides similar `Uint256` type (note, 256-bit division is still subject for some optimizations).
 
 Released under the [MIT License](LICENSE).
 

@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestUint128String unit tests for Uint128.String() method
-func TestUint128String(t *testing.T) {
+// TestUint256String unit tests for Uint256.String() method
+func TestUint256String(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		// Zero()
 		if expected, got := "0", Zero().String(); got != expected {
@@ -36,14 +36,14 @@ func TestUint128String(t *testing.T) {
 	})
 }
 
-// BenchmarkUint128String performance tests for Uint128.String() method
-func BenchmarkUint128String(b *testing.B) {
+// BenchmarkUint256String performance tests for Uint256.String() method
+func BenchmarkUint256String(b *testing.B) {
 	b.ReportAllocs()
 
 	x := rand256()
 	xb := x.Big()
 
-	b.Run("Uint128", func(b *testing.B) {
+	b.Run("Uint256", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_ = x.String()
 		}
@@ -56,8 +56,8 @@ func BenchmarkUint128String(b *testing.B) {
 	})
 }
 
-// TestUint128Format unit tests for Uint128.Format() method
-func TestUint128Format(t *testing.T) {
+// TestUint256Format unit tests for Uint256.Format() method
+func TestUint256Format(t *testing.T) {
 	t.Run("manual", func(t *testing.T) {
 		// Zero()
 		if expected, got := "0o0", fmt.Sprintf("%#O", Zero()); got != expected {
