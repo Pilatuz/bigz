@@ -1,7 +1,6 @@
 package uint256
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/Pilatuz/bigx/uint128"
@@ -24,14 +23,8 @@ func One() Uint256 {
 // Max is the largest possible Uint256 value.
 func Max() Uint256 {
 	return Uint256{
-		Lo: Uint128{
-			Lo: math.MaxUint64,
-			Hi: math.MaxUint64,
-		},
-		Hi: Uint128{
-			Lo: math.MaxUint64,
-			Hi: math.MaxUint64,
-		},
+		Lo: uint128.Max(),
+		Hi: uint128.Max(),
 	}
 }
 
@@ -52,7 +45,7 @@ func From128(v Uint128) Uint256 {
 }
 
 // From64 converts 64-bit value v to a Uint256 value.
-// Upper 64-bit half will be zero.
+// Upper 128-bit half will be zero.
 func From64(v uint64) Uint256 {
 	return From128(uint128.From64(v))
 }
@@ -79,6 +72,9 @@ func FromBigX(i *big.Int) (Uint256, bool) {
 		return Max(), false // value overflows 256-bit!
 	}
 
+	// Note, actually result of big.Int.Uint64 is undefined
+	// if stored value is greater than 2^64
+	// but we assume that it just gets lower 64 bits.
 	t := new(big.Int)
 	lolo := i.Uint64()
 	lohi := t.Rsh(i, 64).Uint64()
@@ -115,7 +111,7 @@ func (u Uint256) Equals(v Uint256) bool {
 	return u.Lo.Equals(v.Lo) && u.Hi.Equals(v.Hi)
 }
 
-// Equals64 returns true if 256-bit value equals to a 128-bit value.
+// Equals128 returns true if 256-bit value equals to a 128-bit value.
 func (u Uint256) Equals128(v Uint128) bool {
 	return u.Lo.Equals(v) && u.Hi.IsZero()
 }
@@ -131,7 +127,7 @@ func (u Uint256) Cmp(v Uint256) int {
 	return u.Lo.Cmp(v.Lo)
 }
 
-// Cmp64 compares 256-bit and 128-bit values and returns:
+// Cmp128 compares 256-bit and 128-bit values and returns:
 //   -1 if u <  v
 //    0 if u == v
 //   +1 if u >  v
@@ -162,7 +158,7 @@ func (u Uint256) AndNot(v Uint256) Uint256 {
 	}
 }
 
-// AndNot64 returns logical AND NOT (u&v) of 256-bit and 128-bit values.
+// AndNot128 returns logical AND NOT (u&v) of 256-bit and 128-bit values.
 func (u Uint256) AndNot128(v Uint128) Uint256 {
 	return Uint256{
 		Lo: u.Lo.AndNot(v),
@@ -178,7 +174,7 @@ func (u Uint256) And(v Uint256) Uint256 {
 	}
 }
 
-// And64 returns logical AND (u&v) of 256-bit and 128-bit values.
+// And128 returns logical AND (u&v) of 256-bit and 128-bit values.
 func (u Uint256) And128(v Uint128) Uint256 {
 	return Uint256{
 		Lo: u.Lo.And(v),
@@ -194,7 +190,7 @@ func (u Uint256) Or(v Uint256) Uint256 {
 	}
 }
 
-// Or64 returns logical OR (u|v) of 256-bit and 128-bit values.
+// Or128 returns logical OR (u|v) of 256-bit and 128-bit values.
 func (u Uint256) Or128(v Uint128) Uint256 {
 	return Uint256{
 		Lo: u.Lo.Or(v),
@@ -210,7 +206,7 @@ func (u Uint256) Xor(v Uint256) Uint256 {
 	}
 }
 
-// Xor64 returns logical XOR (u^v) of 256-bit and 128-bit values.
+// Xor128 returns logical XOR (u^v) of 256-bit and 128-bit values.
 func (u Uint256) Xor128(v Uint128) Uint256 {
 	return Uint256{
 		Lo: u.Lo.Xor(v),
@@ -323,7 +319,7 @@ func (u Uint256) Mod(v Uint256) Uint256 {
 	return r
 }
 
-// Mod64 returns modulo (u%v) of 256-bit and 128-bit values.
+// Mod128 returns modulo (u%v) of 256-bit and 128-bit values.
 func (u Uint256) Mod128(v Uint128) Uint128 {
 	_, r := u.QuoRem128(v)
 	return r
@@ -357,7 +353,7 @@ func (u Uint256) QuoRem(v Uint256) (Uint256, Uint256) {
 	return q, r
 }
 
-// QuoRem64 returns quotient (u/v) and remainder (u%v) of 256-bit and 128-bit values.
+// QuoRem128 returns quotient (u/v) and remainder (u%v) of 256-bit and 128-bit values.
 func (u Uint256) QuoRem128(v Uint128) (Uint256, Uint128) {
 	if u.Hi.Cmp(v) < 0 {
 		lo, r := div128(u.Hi, u.Lo, v)
