@@ -2,6 +2,7 @@ package uint256
 
 import (
 	"math/big"
+	"math/bits"
 
 	"github.com/Pilatuz/bigx/uint128"
 )
@@ -313,6 +314,12 @@ func (u Uint256) Div128(v Uint128) Uint256 {
 	return q
 }
 
+// Div64 returns division (u/v) of 256-bit and 64-bit values.
+func (u Uint256) Div64(v uint64) Uint256 {
+	q, _ := u.QuoRem64(v)
+	return q
+}
+
 // Mod returns modulo (u%v) of two 256-bit values.
 func (u Uint256) Mod(v Uint256) Uint256 {
 	_, r := u.QuoRem(v)
@@ -322,6 +329,12 @@ func (u Uint256) Mod(v Uint256) Uint256 {
 // Mod128 returns modulo (u%v) of 256-bit and 128-bit values.
 func (u Uint256) Mod128(v Uint128) Uint128 {
 	_, r := u.QuoRem128(v)
+	return r
+}
+
+// Mod64 returns modulo (u%v) of 256-bit and 64-bit values.
+func (u Uint256) Mod64(v uint64) uint64 {
+	_, r := u.QuoRem64(v)
 	return r
 }
 
@@ -363,6 +376,14 @@ func (u Uint256) QuoRem128(v Uint128) (Uint256, Uint128) {
 	hi, r := div128(uint128.Zero(), u.Hi, v)
 	lo, r := div128(r, u.Lo, v)
 	return Uint256{Lo: lo, Hi: hi}, r
+}
+
+// QuoRem64 returns quotient (u/v) and remainder (u%v) of 256-bit and 64-bit values.
+func (u Uint256) QuoRem64(v uint64) (q Uint256, r uint64) {
+	q.Hi, r = u.Hi.QuoRem64(v)
+	q.Lo.Hi, r = bits.Div64(r, u.Lo.Hi, v)
+	q.Lo.Lo, r = bits.Div64(r, u.Lo.Lo, v)
+	return
 }
 
 // div128 returns the quotient and remainder of (hi, lo) divided by y:

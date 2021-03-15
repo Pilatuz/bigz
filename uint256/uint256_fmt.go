@@ -9,8 +9,7 @@ import (
 
 // String returns the base-10 representation of 256-bit value.
 func (u Uint256) String() string {
-	return u.Big().String() // still bit faster
-	/*if u.Hi.IsZero() {
+	if u.Hi.IsZero() {
 		if u.Lo.IsZero() {
 			return "0" // zero
 		}
@@ -19,19 +18,17 @@ func (u Uint256) String() string {
 
 	buf := []byte("000000000000000000000000000000000000000000000000000000000000000000000000000000") // log10(2^256) < 78
 	for i := len(buf); ; i -= 19 {
-		q, r := u.QuoRem128(Uint128{Lo: 1e19}) // largest power of 10 that fits in a uint64
+		q, r := u.QuoRem64(1e19) // largest power of 10 that fits in a uint64
 		var n int
-		for !r.IsZero() {
+		for ; r != 0; r /= 10 {
 			n++
-			rnext, d := r.QuoRem64(10)
-			buf[i-n] += byte(d)
-			r = rnext
+			buf[i-n] += byte(r % 10)
 		}
 		if q.IsZero() {
 			return string(buf[i-n:])
 		}
 		u = q
-	}*/
+	}
 }
 
 // Format does custom formatting of 256-bit value.
