@@ -60,7 +60,7 @@ The 128-bit or 256-bit integer can be initialized in the following ways:
 
 | `uint128` 128-bit package          | `uint256` 256-bit package            | Description                                       |
 |------------------------------------|--------------------------------------|---------------------------------------------------|
-| `u := Uint128{Lo: lo64, Hi: hi64}` | `u := Uint256{Lo: lo128, Hi: hi128}` | Set both lower and upper halfs.                   |
+| `u := Uint128{Lo: lo64, Hi: hi64}` | `u := Uint256{Lo: lo128, Hi: hi128}` | Set both lower half and upper half.               |
 | `u := From64(lo64)`                | `u := From128(lo128)`                | Set only lower half.                              |
 |                                    | `u := From64(lo64)`                  | Set only lower 64-bit.                            |
 | `u := Zero()`                      | `u := Zero()`                        | The same as `From64(0)`.                          |
