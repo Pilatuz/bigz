@@ -1,6 +1,7 @@
 package uint128
 
 import (
+	"errors"
 	"math"
 	"math/big"
 	"math/bits"
@@ -361,6 +362,51 @@ func (u Uint128) QuoRem64(v uint64) (Uint128, uint64) {
 	hi, r := bits.Div64(0, u.Hi, v)
 	lo, r := bits.Div64(r, u.Lo, v)
 	return Uint128{Lo: lo, Hi: hi}, r
+}
+
+// Div returns the quotient and remainder of (hi, lo) divided by y:
+// quo = (hi, lo)/y, rem = (hi, lo)%y with the dividend bits' upper
+// half in parameter hi and the lower half in parameter lo.
+// Panics if y is less or equal to hi!
+func Div(hi, lo, y Uint128) (quo, rem Uint128) {
+	if y.IsZero() {
+		panic(errors.New("integer divide by zero"))
+	}
+	if y.Cmp(hi) <= 0 {
+		panic(errors.New("integer overflow"))
+	}
+
+	s := uint(y.LeadingZeros())
+	y = y.Lsh(s)
+
+	un32 := hi.Lsh(s).Or(lo.Rsh(128 - s))
+	un10 := lo.Lsh(s)
+	q1, rhat := un32.QuoRem64(y.Hi)
+	r1 := From64(rhat)
+
+	for q1.Hi != 0 || q1.Mul64(y.Lo).Cmp(Uint128{Hi: r1.Lo, Lo: un10.Hi}) > 0 {
+		q1 = q1.Sub64(1)
+		r1 = r1.Add64(y.Hi)
+		if r1.Hi != 0 {
+			break
+		}
+	}
+
+	un21 := Uint128{Hi: un32.Lo, Lo: un10.Hi}.Sub(q1.Mul(y))
+	q0, rhat := un21.QuoRem64(y.Hi)
+	r0 := From64(rhat)
+
+	for q0.Hi != 0 || q0.Mul64(y.Lo).Cmp(Uint128{Hi: r0.Lo, Lo: un10.Lo}) > 0 {
+		q0 = q0.Sub64(1)
+		r0 = r0.Add64(y.Hi)
+		if r0.Hi != 0 {
+			break
+		}
+	}
+
+	return Uint128{Hi: q1.Lo, Lo: q0.Lo},
+		Uint128{Hi: un21.Lo, Lo: un10.Lo}.
+			Sub(q0.Mul(y)).Rsh(s)
 }
 
 ///////////////////////////////////////////////////////////////////////////////

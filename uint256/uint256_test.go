@@ -4,6 +4,7 @@ package uint256
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math"
 	"math/big"
 	"testing"
@@ -34,7 +35,7 @@ func generate256s(count int, values chan Uint256) {
 	defer close(values)
 
 	// a few fixed values
-	fixed := []uint64{0, 1, 2, math.MaxUint64 - 1, math.MaxUint64}
+	fixed := []uint64{0, 1, math.MaxUint64 - 1, math.MaxUint64}
 	for _, hihi := range fixed {
 		for _, hilo := range fixed {
 			for _, lohi := range fixed {
@@ -193,6 +194,66 @@ func TestMul(t *testing.T) {
 			got.Or(got, lo.Big())
 			if expected.Cmp(got) != 0 {
 				t.Fatalf("%x * %x != %x, got %x", x, y, expected, got)
+			}
+		}
+	}
+}
+
+// TestDiv unit tests for full 256-bit division.
+func TestDiv(t *testing.T) {
+	t.Run("div_by_zero", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				expected := "integer divide by zero"
+				if fmt.Sprintf("%v", r) != expected {
+					t.Fatalf("unexpected panic: %v", r)
+				}
+			} else {
+				t.Fatalf("expected panic, got nothing")
+			}
+		}()
+		Div(One(), One(), Zero())
+	})
+
+	t.Run("overflow", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				expected := "integer overflow"
+				if fmt.Sprintf("%v", r) != expected {
+					t.Fatalf("unexpected panic: %v", r)
+				}
+			} else {
+				t.Fatalf("expected panic, got nothing")
+			}
+		}()
+		Div(Max(), One(), One())
+	})
+
+	xvalues := make(chan Uint256)
+	go generate256s(10, xvalues)
+	for x := range xvalues {
+		yvalues := make(chan Uint256)
+		go generate256s(10, yvalues)
+		for y := range yvalues {
+			zvalues := make(chan Uint256)
+			go generate256s(10, zvalues)
+			for z := range zvalues {
+				if z.IsZero() {
+					continue
+				}
+				if z.Cmp(x) <= 0 {
+					continue
+				}
+				q, r := Div(x, y, z)
+				xy := new(big.Int).Lsh(x.Big(), 256)
+				xy.Or(xy, y.Big())
+				expectedq, expectedr := new(big.Int).QuoRem(xy, z.Big(), new(big.Int))
+				if expectedq.Cmp(q.Big()) != 0 {
+					t.Fatalf("%x / %x != %x, got %x", xy, z, expectedq, q)
+				}
+				if expectedr.Cmp(r.Big()) != 0 {
+					t.Fatalf("%x %% %x != %x, got %x", xy, z, expectedr, r)
+				}
 			}
 		}
 	}

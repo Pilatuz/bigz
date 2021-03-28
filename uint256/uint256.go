@@ -1,6 +1,7 @@
 package uint256
 
 import (
+	"errors"
 	"math/big"
 	"math/bits"
 
@@ -349,7 +350,7 @@ func (u Uint256) QuoRem(v Uint256) (Uint256, Uint256) {
 	// within 1 of the actual quotient, then adjust.
 	n := uint(v.Hi.LeadingZeros())
 	u1, v1 := u.Rsh(1), v.Lsh(n)
-	tq, _ := div128(u1.Hi, u1.Lo, v1.Hi)
+	tq, _ := uint128.Div(u1.Hi, u1.Lo, v1.Hi)
 	tq = tq.Rsh(127 - n)
 	if !tq.IsZero() {
 		tq = tq.Sub64(1)
@@ -369,12 +370,12 @@ func (u Uint256) QuoRem(v Uint256) (Uint256, Uint256) {
 // QuoRem128 returns quotient (u/v) and remainder (u%v) of 256-bit and 128-bit values.
 func (u Uint256) QuoRem128(v Uint128) (Uint256, Uint128) {
 	if u.Hi.Cmp(v) < 0 {
-		lo, r := div128(u.Hi, u.Lo, v)
+		lo, r := uint128.Div(u.Hi, u.Lo, v)
 		return Uint256{Lo: lo}, r
 	}
 
-	hi, r := div128(uint128.Zero(), u.Hi, v)
-	lo, r := div128(r, u.Lo, v)
+	hi, r := uint128.Div(uint128.Zero(), u.Hi, v)
+	lo, r := uint128.Div(r, u.Lo, v)
 	return Uint256{Lo: lo, Hi: hi}, r
 }
 
@@ -386,47 +387,49 @@ func (u Uint256) QuoRem64(v uint64) (q Uint256, r uint64) {
 	return
 }
 
-// div128 returns the quotient and remainder of (hi, lo) divided by y:
+// Div returns the quotient and remainder of (hi, lo) divided by y:
 // quo = (hi, lo)/y, rem = (hi, lo)%y with the dividend bits' upper
 // half in parameter hi and the lower half in parameter lo.
-func div128(hi, lo, y Uint128) (quo, rem Uint128) {
-	// if y.IsZero() {
-	// 	panic(divideError)
-	// }
-	// if y.Cmp(hi) <= 0 {
-	// 	panic(overflowError)
-	// }
+// Panics if y is less or equal to hi!
+func Div(hi, lo, y Uint256) (quo, rem Uint256) {
+	if y.IsZero() {
+		panic(errors.New("integer divide by zero"))
+	}
+	if y.Cmp(hi) <= 0 {
+		panic(errors.New("integer overflow"))
+	}
 
 	s := uint(y.LeadingZeros())
 	y = y.Lsh(s)
 
-	un32 := hi.Lsh(s).Or(lo.Rsh(128 - s))
+	un32 := hi.Lsh(s).Or(lo.Rsh(256 - s))
 	un10 := lo.Lsh(s)
-	q1, rhat := un32.QuoRem64(y.Hi)
-	r1 := uint128.From64(rhat)
+	q1, rhat := un32.QuoRem128(y.Hi)
+	r1 := From128(rhat)
 
-	for q1.Hi != 0 || q1.Mul64(y.Lo).Cmp(Uint128{Hi: r1.Lo, Lo: un10.Hi}) > 0 {
-		q1 = q1.Sub64(1)
-		r1 = r1.Add64(y.Hi)
-		if r1.Hi != 0 {
+	for !q1.Hi.IsZero() || q1.Mul128(y.Lo).Cmp(Uint256{Hi: r1.Lo, Lo: un10.Hi}) > 0 {
+		q1 = q1.Sub128(uint128.One())
+		r1 = r1.Add128(y.Hi)
+		if !r1.Hi.IsZero() {
 			break
 		}
 	}
 
-	un21 := Uint128{Hi: un32.Lo, Lo: un10.Hi}.Sub(q1.Mul(y))
-	q0, rhat := un21.QuoRem64(y.Hi)
-	r0 := uint128.From64(rhat)
+	un21 := Uint256{Hi: un32.Lo, Lo: un10.Hi}.Sub(q1.Mul(y))
+	q0, rhat := un21.QuoRem128(y.Hi)
+	r0 := From128(rhat)
 
-	for q0.Hi != 0 || q0.Mul64(y.Lo).Cmp(Uint128{Hi: r0.Lo, Lo: un10.Lo}) > 0 {
-		q0 = q0.Sub64(1)
-		r0 = r0.Add64(y.Hi)
-		if r0.Hi != 0 {
+	for !q0.Hi.IsZero() || q0.Mul128(y.Lo).Cmp(Uint256{Hi: r0.Lo, Lo: un10.Lo}) > 0 {
+		q0 = q0.Sub128(uint128.One())
+		r0 = r0.Add128(y.Hi)
+		if !r0.Hi.IsZero() {
 			break
 		}
 	}
 
-	return Uint128{Hi: q1.Lo, Lo: q0.Lo},
-		Uint128{Hi: un21.Lo, Lo: un10.Lo}.Sub(q0.Mul(y)).Rsh(s)
+	return Uint256{Hi: q1.Lo, Lo: q0.Lo},
+		Uint256{Hi: un21.Lo, Lo: un10.Lo}.
+			Sub(q0.Mul(y)).Rsh(s)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
