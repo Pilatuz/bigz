@@ -74,6 +74,36 @@ func BenchmarkArithmetic(b *testing.B) {
 		}
 	})
 
+	b.Run("big.Int.Mul_256_128", func(b *testing.B) {
+		xb := make([]*big.Int, K)
+		yb := make([]*big.Int, K)
+		for i := 0; i < K; i++ {
+			xb[i] = xx[i].Big()
+			yb[i] = yy[i].Lo.Big()
+		}
+		q := new(big.Int)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			q = q.Mul(xb[i%K], yb[i%K])
+		}
+		DummyOutput += int(q.Uint64() & 1)
+	})
+
+	b.Run("big.Int.Mul_256_256", func(b *testing.B) {
+		xb := make([]*big.Int, K)
+		yb := make([]*big.Int, K)
+		for i := 0; i < K; i++ {
+			xb[i] = xx[i].Big()
+			yb[i] = yy[i].Big()
+		}
+		q := new(big.Int)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			q = q.Mul(xb[i%K], yb[i%K])
+		}
+		DummyOutput += int(q.Uint64() & 1)
+	})
+
 	b.Run("Lsh_256", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			res := xx[i%K].Lsh(zz[i%K])
