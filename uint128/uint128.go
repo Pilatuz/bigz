@@ -178,7 +178,7 @@ func (u Uint128) And(v Uint128) Uint128 {
 func (u Uint128) And64(v uint64) Uint128 {
 	return Uint128{
 		Lo: u.Lo & v,
-		Hi: u.Hi & 0, // hope compiler is able to always put just zero instead
+		Hi: 0,
 	}
 }
 
@@ -194,7 +194,7 @@ func (u Uint128) Or(v Uint128) Uint128 {
 func (u Uint128) Or64(v uint64) Uint128 {
 	return Uint128{
 		Lo: u.Lo | v,
-		Hi: u.Hi | 0, // hope compiler is able to always put just u.Hi instead
+		Hi: u.Hi,
 	}
 }
 
@@ -210,7 +210,7 @@ func (u Uint128) Xor(v Uint128) Uint128 {
 func (u Uint128) Xor64(v uint64) Uint128 {
 	return Uint128{
 		Lo: u.Lo ^ v,
-		Hi: u.Hi ^ 0, // hope compiler is able to always put just u.Hi instead
+		Hi: u.Hi,
 	}
 }
 
