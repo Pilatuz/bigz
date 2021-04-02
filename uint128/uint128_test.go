@@ -22,6 +22,17 @@ func rand128() Uint128 {
 	return u
 }
 
+// rand128slice generates slice of Uint128 pure random values.
+func rand128slice(count int) []Uint128 {
+	buf := make([]byte, 16)
+	out := make([]Uint128, count)
+	for i := range out {
+		rand.Read(buf)
+		out[i] = LoadLittleEndian(buf)
+	}
+	return out
+}
+
 // generate128s generates a series of pseudo-random Uint128 values
 func generate128s(count int, values chan Uint128) {
 	defer close(values)
