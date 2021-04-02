@@ -116,16 +116,24 @@ func BenchmarkMul(b *testing.B) {
 		}
 	})
 
-	// Uint128: 128 + 128
+	// Mul: 128 * 128
 	b.Run("Mul_128_128", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			hi, lo := Mul(xx[i%K], yy[i%K])
+			DummyOutput += int(hi.Lo&1) + int(lo.Lo&1)
+		}
+	})
+
+	// Uint128: 128 * 128
+	b.Run("Uint128_128_128", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			res := xx[i%K].Mul(yy[i%K])
 			DummyOutput += int(res.Lo & 1)
 		}
 	})
 
-	// Uint128: 128 + 64
-	b.Run("Mul64_128_64", func(b *testing.B) {
+	// Uint128: 128 * 64
+	b.Run("Uint128_128_64", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			res := xx[i%K].Mul64(yy[i%K].Lo)
 			DummyOutput += int(res.Lo & 1)

@@ -5,9 +5,10 @@ package uint256
 import (
 	"crypto/rand"
 	"fmt"
-	"math"
 	"math/big"
 	"testing"
+
+	"github.com/Pilatuz/bigx/v2/uint128"
 )
 
 // rand256 generates single Uint256 random value.
@@ -30,21 +31,28 @@ func rand256() Uint256 {
 	return u
 }
 
+// rand256slice generates slice of Uint256 pure random values.
+func rand256slice(count int) []Uint256 {
+	buf := make([]byte, 32)
+	out := make([]Uint256, count)
+	for i := range out {
+		rand.Read(buf)
+		out[i] = LoadLittleEndian(buf)
+	}
+	return out
+}
+
 // generate256s generates a series of pseudo-random Uint256 values
 func generate256s(count int, values chan Uint256) {
 	defer close(values)
 
 	// a few fixed values
-	fixed := []uint64{0, 1, math.MaxUint64 - 1, math.MaxUint64}
-	for _, hihi := range fixed {
-		for _, hilo := range fixed {
-			for _, lohi := range fixed {
-				for _, lolo := range fixed {
-					values <- Uint256{
-						Lo: Uint128{Lo: lolo, Hi: lohi},
-						Hi: Uint128{Lo: hilo, Hi: hihi},
-					}
-				}
+	fixed := []Uint128{uint128.Zero(), uint128.One(), uint128.Max().Sub64(1), uint128.Max()}
+	for _, hi := range fixed {
+		for _, lo := range fixed {
+			values <- Uint256{
+				Lo: lo,
+				Hi: hi,
 			}
 		}
 	}
