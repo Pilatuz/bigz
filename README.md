@@ -5,7 +5,7 @@ operations. Unlike `math/big`, operations on `Uint128` always produce new values
 instead of modifying a pointer receiver. A `Uint128` value is therefore immutable, just
 like `uint64` and friends.
 
-`bigz/uint256` provides similar `Uint256` type (note, 256-bit division is still subject for some optimizations).
+`bigz/uint256` provides similar `Uint256` type.
 
 Released under the [MIT License](LICENSE).
 
@@ -47,6 +47,7 @@ The key differences from [original package](https://github.com/lukechampine/uint
 - No panics! All methods have wrap-around semantic!
 - `Zero` and `Max` are functions to prevent modification of global variables.
 - `New` was removed to encourage explicit `Uint128{Lo: ..., Hi: ...}` initialization.
+  Just not to confuse what is going first, i.e. `New(lo, hi)` or `New(hi, lo)`.
 - Trivial (via `big.Int`) implementation of fmt.Formatter interface to support for example hex output as `fmt.Sprintf("%X", u)`.
 - Trivial (via `big.Int`) implementation of TextMarshaller and TextUnmarshaler interfaces to support JSON encoding.
 - Store/Load methods support little-endian and big-endian byte order.
