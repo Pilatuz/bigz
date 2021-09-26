@@ -67,7 +67,7 @@ The 128-bit or 256-bit integer can be initialized in the following ways:
 | `u := One()`                       | `u := One()`                         | The same as `From64(1)`.                          |
 | `u := Max()`                       | `u := Max()`                         | The largest possible value.                       |
 | `u := FromBig(big)`                | `u := FromBig(big)`                  | Convert from `*big.Int` with saturation.          |
-| `u := FromBigX(big)`               | `u := FromBigX(big)`                 | The same as `FromBig` but provides `ok` flag.     |
+| `u := FromBigEx(big)`              | `u := FromBigEx(big)`                | The same as `FromBig` but provides `ok` flag.     |
 
 The following arithmetic operations are supported:
 

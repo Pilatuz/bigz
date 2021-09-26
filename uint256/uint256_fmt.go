@@ -48,7 +48,7 @@ func (u *Uint256) UnmarshalText(text []byte) error {
 	if err := i.UnmarshalText(text); err != nil {
 		return err
 	}
-	v, ok := FromBigX(i)
+	v, ok := FromBigEx(i)
 	if !ok {
 		return fmt.Errorf("%q overflows 256-bit integer", text)
 	}

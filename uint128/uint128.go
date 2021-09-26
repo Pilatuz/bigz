@@ -50,15 +50,15 @@ func From64(v uint64) Uint128 {
 // If input integer is nil or negative then return Zero.
 // If input interger overflows 128-bit then return Max.
 func FromBig(i *big.Int) Uint128 {
-	u, _ := FromBigX(i)
+	u, _ := FromBigEx(i)
 	return u
 }
 
-// FromBigX converts *big.Int to 128-bit Uint128 value (eXtended version).
+// FromBigEx converts *big.Int to 128-bit Uint128 value (eXtended version).
 // Provides ok successful flag as a second return value.
 // If input integer is negative or overflows 128-bit then ok=false.
 // If input is nil then zero 128-bit returned.
-func FromBigX(i *big.Int) (Uint128, bool) {
+func FromBigEx(i *big.Int) (Uint128, bool) {
 	switch {
 	case i == nil:
 		return Zero(), true // assuming nil === 0

@@ -18,12 +18,12 @@ func ExampleFromBig() {
 	// 12345
 }
 
-// ExampleFromBigX is an example for FromBigX.
-func ExampleFromBigX() {
+// ExampleFromBigEx is an example for FromBigEx.
+func ExampleFromBigEx() {
 	one := new(big.Int).SetInt64(1)
-	fmt.Println(uint128.FromBigX(new(big.Int).SetInt64(-1))) // => Zero()
-	fmt.Println(uint128.FromBigX(one))
-	fmt.Println(uint128.FromBigX(one.Lsh(one, 128))) // 2^128, overflows => Max()
+	fmt.Println(uint128.FromBigEx(new(big.Int).SetInt64(-1))) // => Zero()
+	fmt.Println(uint128.FromBigEx(one))
+	fmt.Println(uint128.FromBigEx(one.Lsh(one, 128))) // 2^128, overflows => Max()
 	// Output:
 	// 0 false
 	// 1 true
