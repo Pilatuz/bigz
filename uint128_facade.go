@@ -1,7 +1,7 @@
-package bigx
+package bigz
 
 import (
-	u128 "github.com/Pilatuz/bigx/v2/uint128"
+	u128 "github.com/Pilatuz/bigz/uint128"
 )
 
 // Uint128 is type alias for 128-bit unsigned integer.

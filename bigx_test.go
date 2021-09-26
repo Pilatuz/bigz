@@ -1,14 +1,14 @@
-package bigx_test
+package bigz_test
 
 import (
 	"fmt"
 
-	"github.com/Pilatuz/bigx/v2"
+	"github.com/Pilatuz/bigz"
 )
 
 // Example_new an example of creating Uint128 values.
 func Example_new() {
-	fmt.Println(bigx.Uint128{Lo: 12345})
+	fmt.Println(bigz.Uint128{Lo: 12345})
 	// Output:
 	// 12345
 }

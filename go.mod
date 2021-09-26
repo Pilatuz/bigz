@@ -1,3 +1,3 @@
-module github.com/Pilatuz/bigx/v2
+module github.com/Pilatuz/bigz
 
 go 1.15

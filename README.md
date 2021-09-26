@@ -1,11 +1,11 @@
-# bigx [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][reportcard-img]][reportcard]
+# bigz [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][reportcard-img]][reportcard]
 
-`bigx/uint128` provides a high-performance `Uint128` type that supports standard arithmetic
+`bigz/uint128` provides a high-performance `Uint128` type that supports standard arithmetic
 operations. Unlike `math/big`, operations on `Uint128` always produce new values
 instead of modifying a pointer receiver. A `Uint128` value is therefore immutable, just
 like `uint64` and friends.
 
-`bigx/uint256` provides similar `Uint256` type (note, 256-bit division is still subject for some optimizations).
+`bigz/uint256` provides similar `Uint256` type (note, 256-bit division is still subject for some optimizations).
 
 Released under the [MIT License](LICENSE).
 
@@ -13,26 +13,26 @@ Released under the [MIT License](LICENSE).
 ## Installation
 
 ```shell
-go get github.com/Pilatuz/bigx/v2
+go get github.com/Pilatuz/bigz
 ```
 
 The name `uint128.Uint128` and `uint256.Uint256` stutter, so it is recommended either using a "facade" package:
 
 ```go
 import (
-    "github.com/Pilatuz/bigx/v2"
+    "github.com/Pilatuz/bigz"
 )
 
-// then use bigx.Uint128 type
-// then use bigx.Uint256 type
+// then use bigz.Uint128 type
+// then use bigz.Uint256 type
 ```
 
 or type aliasing to give it a project-specific name:
 
 ```go
 import (
-    "github.com/Pilatuz/bigx/v2/uint128"
-    "github.com/Pilatuz/bigx/v2/uint256"
+    "github.com/Pilatuz/bigz/uint128"
+    "github.com/Pilatuz/bigz/uint256"
 )
 
 type U128 = uint128.Uint128
@@ -71,7 +71,7 @@ The 128-bit or 256-bit integer can be initialized in the following ways:
 
 The following arithmetic operations are supported:
 
-| `bigx.Uint128`           | `bigx.Uint256`            | Standard `*big.Int` equivalent                                  |
+| `bigz.Uint128`           | `bigz.Uint256`            | Standard `*big.Int` equivalent                                  |
 |--------------------------|---------------------------|-----------------------------------------------------------------|
 | `u.Add`, `u.Add64`       | `u.Add`, `u.Add128`       | [`big.Int.Add`](https://golang.org/pkg/math/big/#Int.Add)       |
 | `u.Sub`, `u.Sub64`       | `u.Sub`, `u.Sub128`       | [`big.Int.Sub`](https://golang.org/pkg/math/big/#Int.Sub)       |
@@ -82,7 +82,7 @@ The following arithmetic operations are supported:
 
 The following logical and comparison operations are supported:
 
-| `bigx.Uint128`           | `bigx.Uint1256`           | Standard `*big.Int` equivalent                                  |
+| `bigz.Uint128`           | `bigz.Uint1256`           | Standard `*big.Int` equivalent                                  |
 |--------------------------|---------------------------|-----------------------------------------------------------------|
 | `u.Equals`, `u.Equals64` | `u.Equals`, `u.Equals128` | [`big.Int.Cmp == 0`](https://golang.org/pkg/math/big/#Int.Cmp)  |
 | `u.Cmp`, `u.Cmp64`       | `u.Cmp`     `u.Cmp64`     | [`big.Int.Cmp`](https://golang.org/pkg/math/big/#Int.Cmp)       |
@@ -96,7 +96,7 @@ The following logical and comparison operations are supported:
 
 The following bit operations are supported:
 
-| `bigx.Uint128`    | `bigx.Uint256`    | Standard 64-bit equivalent                                                  |
+| `bigz.Uint128`    | `bigz.Uint256`    | Standard 64-bit equivalent                                                  |
 |-------------------|-------------------|-----------------------------------------------------------------------------|
 | `u.RotateLeft`    | `u.RotateLeft`    | [`bits.RotateLeft64`](https://golang.org/pkg/math/bits/#RotateLeft64)       |
 | `u.RotateRight`   | `u.RotateRight`   | [`bits.RotateRight64`](https://golang.org/pkg/math/bits/#RotateRight64)     |
@@ -109,7 +109,7 @@ The following bit operations are supported:
 
 The following miscellaneous operations are supported:
 
-| `bigx.Uint128`      | `bigx.Uint256`      | Standard equivalent                                                                  |
+| `bigz.Uint128`      | `bigz.Uint256`      | Standard equivalent                                                                  |
 |---------------------|---------------------|--------------------------------------------------------------------------------------|
 | `u.String`          | `u.String`          | [`big.Int.String`](https://golang.org/pkg/math/big/#Int.String)                      |
 | `u.Format`          | `u.Format`          | [`big.Int.Format`](https://golang.org/pkg/math/big/#Int.Format)                      |
@@ -123,11 +123,11 @@ The following miscellaneous operations are supported:
 See the [documentation][doc] for a complete API specification.
 
 
-[doc-img]: https://godoc.org/github.com/Pilatuz/bigx/v2?status.svg
-[doc]: https://godoc.org/github.com/Pilatuz/bigx/v2
-[ci-img]: https://travis-ci.com/Pilatuz/bigx.svg?branch=master
-[ci]: https://travis-ci.com/Pilatuz/bigx
-[cov-img]: https://codecov.io/gh/Pilatuz/bigx/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/Pilatuz/bigx
-[reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/bigx
-[reportcard]: https://goreportcard.com/report/github.com/Pilatuz/bigx
+[doc-img]: https://godoc.org/github.com/Pilatuz/bigz?status.svg
+[doc]: https://godoc.org/github.com/Pilatuz/bigz
+[ci-img]: https://travis-ci.com/Pilatuz/bigz.svg?branch=master
+[ci]: https://travis-ci.com/Pilatuz/bigz
+[cov-img]: https://codecov.io/gh/Pilatuz/bigz/branch/master/graph/badge.svg
+[cov]: https://codecov.io/gh/Pilatuz/bigz
+[reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/bigz
+[reportcard]: https://goreportcard.com/report/github.com/Pilatuz/bigz
