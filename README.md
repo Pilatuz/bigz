@@ -126,8 +126,8 @@ See the [documentation][doc] for a complete API specification.
 
 [doc-img]: https://godoc.org/github.com/Pilatuz/bigz?status.svg
 [doc]: https://godoc.org/github.com/Pilatuz/bigz
-[ci-img]: https://travis-ci.com/Pilatuz/bigz.svg?branch=master
-[ci]: https://travis-ci.com/Pilatuz/bigz
+[ci-img]: https://github.com/Pilatuz/bigz/actions/workflows/go.yml/badge.svg
+[ci]: https://github.com/Pilatuz/bigz/actions
 [cov-img]: https://codecov.io/gh/Pilatuz/bigz/branch/master/graph/badge.svg
 [cov]: https://codecov.io/gh/Pilatuz/bigz
 [reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/bigz
