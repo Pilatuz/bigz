@@ -7,6 +7,13 @@ import (
 	"github.com/Pilatuz/bigz/uint128"
 )
 
+// FromString parses input string as a Uint256 value.
+func FromString(s string) (Uint256, error) {
+	var u Uint256
+	_, err := fmt.Sscan(s, &u)
+	return u, err
+}
+
 // String returns the base-10 representation of 256-bit value.
 func (u Uint256) String() string {
 	if u.Hi.IsZero() {
@@ -34,6 +41,22 @@ func (u Uint256) String() string {
 // Format does custom formatting of 256-bit value.
 func (u Uint256) Format(s fmt.State, ch rune) {
 	u.Big().Format(s, ch) // via big.Int, unefficient! consider to optimize
+}
+
+// Scan implements fmt.Scanner.
+func (u *Uint256) Scan(s fmt.ScanState, ch rune) error {
+	i := new(big.Int) // via big.Int, unefficient! consider to optimize
+	if err := i.Scan(s, ch); err != nil {
+		return err
+	}
+
+	v, ok := FromBigEx(i)
+	if !ok {
+		return fmt.Errorf("out of 256-bit range")
+	}
+
+	*u = v
+	return nil
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.

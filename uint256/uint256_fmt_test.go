@@ -13,15 +13,42 @@ func TestUint256String(t *testing.T) {
 		if expected, got := "0", Zero().String(); got != expected {
 			t.Errorf("Zero() should be %q, got %q", expected, got)
 		}
+		if u, err := FromString("0"); err != nil {
+			t.Fatalf("FromString(%q) got error: %s", "0", err)
+		} else if !u.Equals(Zero()) {
+			t.Fatalf("FromString(%q) mismatch: actual %q", "0", u)
+		}
 
 		// One()
 		if expected, got := "1", One().String(); got != expected {
 			t.Errorf("One() should be %q, got %q", expected, got)
 		}
+		if u, err := FromString("1"); err != nil {
+			t.Fatalf("FromString(%q) got error: %s", "1", err)
+		} else if !u.Equals(One()) {
+			t.Fatalf("FromString(%q) mismatch: actual %q", "1", u)
+		}
 
 		// Max()
 		if expected, got := "115792089237316195423570985008687907853269984665640564039457584007913129639935", Max().String(); got != expected {
 			t.Errorf("Max() should be %q, got %q", expected, got)
+		}
+	})
+
+	t.Run("from_string", func(t *testing.T) {
+		// negative
+		if _, err := FromString("-1"); err == nil {
+			t.Fatalf("FromString(%q) expected error", "-1")
+		}
+
+		// too big
+		if _, err := FromString("115792089237316195423570985008687907853269984665640564039457584007913129639936"); err == nil {
+			t.Fatalf("FromString(%q) expected error", "115792089237316195423570985008687907853269984665640564039457584007913129639936")
+		}
+
+		// not a number
+		if _, err := FromString("not a number"); err == nil {
+			t.Fatalf("FromString(%q) expected error", "not a number")
 		}
 	})
 
@@ -31,6 +58,11 @@ func TestUint256String(t *testing.T) {
 		for x := range values {
 			if expected, got := x.Big().String(), x.String(); got != expected {
 				t.Fatalf("String() mismatch:\n\t(-) expected %q\n\t(+)   actual %q", expected, got)
+			}
+			if u, err := FromString(x.String()); err != nil {
+				t.Fatalf("FromString(%q) got error: %s", x, err)
+			} else if !u.Equals(x) {
+				t.Fatalf("FromString(%q) mismatch: actual %q", x, u)
 			}
 		}
 	})

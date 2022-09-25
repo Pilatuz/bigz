@@ -30,6 +30,17 @@ func ExampleFromBigEx() {
 	// 340282366920938463463374607431768211455 false
 }
 
+// ExampleFromString is an example for FromString.
+func ExampleFromString() {
+	u, _ := uint128.FromString("1")
+	fmt.Println(u)
+	_, err := uint128.FromString("-1")
+	fmt.Println(err)
+	// Output:
+	// 1
+	// out of 128-bit range
+}
+
 // ExampleUint128_String is an example for Uint128.String.
 func ExampleUint128_String() {
 	fmt.Println(uint128.Zero())

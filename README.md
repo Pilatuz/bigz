@@ -69,6 +69,7 @@ The 128-bit or 256-bit integer can be initialized in the following ways:
 | `u := Max()`                       | `u := Max()`                         | The largest possible value.                       |
 | `u := FromBig(big)`                | `u := FromBig(big)`                  | Convert from `*big.Int` with saturation.          |
 | `u := FromBigEx(big)`              | `u := FromBigEx(big)`                | The same as `FromBig` but provides `ok` flag.     |
+| `u, err := FromString("1")`        | `u, err := FromString("1")`          | Converts from `string` and provides error.        |
 
 The following arithmetic operations are supported:
 
@@ -114,6 +115,7 @@ The following miscellaneous operations are supported:
 |---------------------|---------------------|--------------------------------------------------------------------------------------|
 | `u.String`          | `u.String`          | [`big.Int.String`](https://golang.org/pkg/math/big/#Int.String)                      |
 | `u.Format`          | `u.Format`          | [`big.Int.Format`](https://golang.org/pkg/math/big/#Int.Format)                      |
+| `u.Scan`            | `u.Scan`            | [`big.Int.Scan`](https://golang.org/pkg/math/big/#Int.Scan)                          |
 | `u.MarshalText`     | `u.MarshalText`     | [`big.Int.MarshalText`](https://golang.org/pkg/math/big/#Int.MarshalText)            |
 | `u.UnmarshalText`   | `u.UnmarshalText`   | [`big.Int.UnmarshalText`](https://golang.org/pkg/math/big/#Int.UnmarshalText)        |
 | `StoreLittleEndian` | `StoreLittleEndian` | [`binary.LittleEndian.PutUint64`](https://golang.org/pkg/encoding/binary/#ByteOrder) |
