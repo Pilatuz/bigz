@@ -84,7 +84,7 @@ The following arithmetic operations are supported:
 
 The following logical and comparison operations are supported:
 
-| `bigz.Uint128`           | `bigz.Uint1256`           | Standard `*big.Int` equivalent                                  |
+| `bigz.Uint128`           | `bigz.Uint256`           | Standard `*big.Int` equivalent                                  |
 |--------------------------|---------------------------|-----------------------------------------------------------------|
 | `u.Equals`, `u.Equals64` | `u.Equals`, `u.Equals128` | [`big.Int.Cmp == 0`](https://golang.org/pkg/math/big/#Int.Cmp)  |
 | `u.Cmp`, `u.Cmp64`       | `u.Cmp`     `u.Cmp64`     | [`big.Int.Cmp`](https://golang.org/pkg/math/big/#Int.Cmp)       |
