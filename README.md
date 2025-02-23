@@ -1,4 +1,4 @@
-# bigz [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Coverage Status][cov-img]][cov] [![Go Report Card][reportcard-img]][reportcard]
+# bigz [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Go Report Card][reportcard-img]][reportcard]
 
 `bigz/uint128` provides a high-performance `Uint128` type that supports standard arithmetic
 operations. Unlike `math/big`, operations on `Uint128` always produce new values
@@ -130,7 +130,5 @@ See the [documentation][doc] for a complete API specification.
 [doc]: https://godoc.org/github.com/Pilatuz/bigz
 [ci-img]: https://github.com/Pilatuz/bigz/actions/workflows/go.yml/badge.svg
 [ci]: https://github.com/Pilatuz/bigz/actions
-[cov-img]: https://codecov.io/gh/Pilatuz/bigz/branch/master/graph/badge.svg
-[cov]: https://codecov.io/gh/Pilatuz/bigz
 [reportcard-img]: https://goreportcard.com/badge/github.com/Pilatuz/bigz
 [reportcard]: https://goreportcard.com/report/github.com/Pilatuz/bigz
